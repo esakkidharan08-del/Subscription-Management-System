@@ -1290,3 +1290,54 @@ a.kpi:hover {
 .card-head .button-secondary {
   height: 32px;
 }
+
+/* ---------- Polish ---------- */
+
+/* Rows in the working lists open their record from anywhere on the row. */
+tr.row-link {
+  cursor: pointer;
+}
+
+td a {
+  font-weight: 500;
+}
+
+tr.row-link:hover td a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Title-row controls stay on one line instead of wrapping word by word. */
+.page-header .form-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.page-header .form-actions > *,
+.page-header .hint {
+  white-space: nowrap;
+}
+
+.chart-subhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.chart-subhead .segmented button {
+  height: 26px;
+  padding: 0 8px;
+  font-size: var(--fs-small);
+}
+
+.nav-link {
+  transition: background-color 100ms ease;
+}
+
+.card-head h2 {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+}

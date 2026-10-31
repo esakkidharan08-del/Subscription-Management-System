@@ -82,7 +82,7 @@ export default function ProductsPage() {
               {products.data?.data.map((product) => (
                 <tr key={product.id}>
                   <td>{product.name}</td>
-                  <td>{product.type}</td>
+                  <td className="capitalize">{product.type}</td>
                   <td className="number">{formatMoney(product.sales_price)}</td>
                   <td className="number">{formatMoney(product.cost_price)}</td>
                   <td>

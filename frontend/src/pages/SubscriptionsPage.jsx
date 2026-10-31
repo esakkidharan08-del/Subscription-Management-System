@@ -148,6 +148,7 @@ function NewSubscriptionForm({ onCancel }) {
 }
 
 export default function SubscriptionsPage() {
+  const navigate = useNavigate();
   const { user } = useSession();
   const isStaff = user.role !== 'customer';
   const [page, setPage] = useState(1);
@@ -170,7 +171,14 @@ export default function SubscriptionsPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>{isStaff ? 'Subscriptions' : 'My subscriptions'}</h1>
+        <div>
+          <h1>{isStaff ? 'Subscriptions' : 'My subscriptions'}</h1>
+          <p className="page-subline">
+            {subscriptions.data
+              ? `${subscriptions.data.total.toLocaleString('en-IN')} ${status ? `${status} ` : ''}subscription${subscriptions.data.total === 1 ? '' : 's'}`
+              : 'Loading…'}
+          </p>
+        </div>
         {isStaff && !creating && (
           <button onClick={() => setCreating(true)}>New subscription</button>
         )}
@@ -214,7 +222,11 @@ export default function SubscriptionsPage() {
             </thead>
             <tbody>
               {subscriptions.data?.data.map((s) => (
-                <tr key={s.id}>
+                <tr
+                  key={s.id}
+                  className="row-link"
+                  onClick={() => navigate(`/subscriptions/${s.id}`)}
+                >
                   <td>
                     <Link to={`/subscriptions/${s.id}`}>{s.number}</Link>
                   </td>

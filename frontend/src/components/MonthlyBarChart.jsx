@@ -42,9 +42,12 @@ function monthName(month, style = 'short') {
 
 // One series at a time, switched by the control in the header. Past months are
 // ink; the current month is the one hue, because it is the figure still moving.
-export default function MonthlyBarChart({ data, totals }) {
+export default function MonthlyBarChart({ data, totals, periods, months, onMonthsChange }) {
   const [seriesKey, setSeriesKey] = useState('collected');
-  const [active, setActive] = useState(data.length - 1);
+  const [hovered, setActive] = useState(data.length - 1);
+  // The data can change length under the chart (switching 12 months to 3), so the
+  // highlighted month is always kept inside the data it is drawn from.
+  const active = Math.min(hovered, data.length - 1);
 
   const values = data.map((d) => d[seriesKey]);
   const ticks = niceTicks(Math.max(...values));
@@ -83,11 +86,22 @@ export default function MonthlyBarChart({ data, totals }) {
           ))}
         </div>
       </div>
-      <p className="chart-readout" aria-live="polite">
-        {monthName(shown.month, 'long')}
-        {active === data.length - 1 ? ' so far' : ''}:{' '}
-        <strong>{formatMoney(shown[seriesKey])}</strong>
-      </p>
+      <div className="chart-subhead">
+        <p className="chart-readout" aria-live="polite">
+          {monthName(shown.month, 'long')}
+          {active === data.length - 1 ? ' so far' : ''}:{' '}
+          <strong>{formatMoney(shown[seriesKey])}</strong>
+        </p>
+        {periods && (
+          <div className="segmented" role="group" aria-label="Reporting period">
+            {periods.map((p) => (
+              <button key={p} aria-pressed={p === months} onClick={() => onMonthsChange(p)}>
+                {p}m
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       <svg
         className="chart"

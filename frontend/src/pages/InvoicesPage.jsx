@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { invoiceExportUrl } from '../api/admin.js';
 import * as billing from '../api/billing.js';
 import { useSession } from '../auth/useSession.js';
@@ -49,6 +49,7 @@ function BillingRunPanel() {
 }
 
 export default function InvoicesPage() {
+  const navigate = useNavigate();
   const { user } = useSession();
   const isStaff = user.role !== 'customer';
   const [page, setPage] = useState(1);
@@ -71,7 +72,14 @@ export default function InvoicesPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>{isStaff ? 'Invoices' : 'My invoices'}</h1>
+        <div>
+          <h1>{isStaff ? 'Invoices' : 'My invoices'}</h1>
+          <p className="page-subline">
+            {invoices.data
+              ? `${invoices.data.total.toLocaleString('en-IN')} invoice${invoices.data.total === 1 ? '' : 's'} match these filters`
+              : 'Loading…'}
+          </p>
+        </div>
         {isStaff && (
           <a className="button-secondary button-anchor" href={invoiceExportUrl(query)}>
             Export CSV
@@ -127,7 +135,11 @@ export default function InvoicesPage() {
             </thead>
             <tbody>
               {invoices.data?.data.map((invoice) => (
-                <tr key={invoice.id}>
+                <tr
+                  key={invoice.id}
+                  className="row-link"
+                  onClick={() => navigate(`/invoices/${invoice.id}`)}
+                >
                   <td>
                     <Link to={`/invoices/${invoice.id}`}>{invoice.number}</Link>
                   </td>

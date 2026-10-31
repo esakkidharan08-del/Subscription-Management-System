@@ -131,13 +131,6 @@ export default function DashboardPage() {
           <p className="page-subline">{finding(d)}</p>
         </div>
         <div className="form-actions">
-          <div className="segmented" role="group" aria-label="Reporting period">
-            {PERIODS.map((p) => (
-              <button key={p} aria-pressed={p === months} onClick={() => setMonths(p)}>
-                {p} months
-              </button>
-            ))}
-          </div>
           <span className="hint" title={`Calculated in ${d.queryMs} ms`}>
             Updated {updated}
           </span>
@@ -196,7 +189,14 @@ export default function DashboardPage() {
       </div>
 
       <div className="overview-main">
-        <MonthlyBarChart key={months} data={d.monthlyRevenue} totals={d.periodTotals} />
+        <MonthlyBarChart
+          key={d.monthlyRevenue.length}
+          data={d.monthlyRevenue}
+          totals={d.periodTotals}
+          periods={PERIODS}
+          months={months}
+          onMonthsChange={setMonths}
+        />
         <AgeingCard ageing={d.ageing} outstanding={d.receivables.outstanding} />
       </div>
 

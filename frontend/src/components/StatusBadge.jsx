@@ -17,5 +17,6 @@ const TONE = {
 export default function StatusBadge({ status, overdue, kind = 'subscription' }) {
   if (overdue) return <span className="badge badge-negative">Overdue</span>;
   const label = kind === 'invoice' && status === 'confirmed' ? 'Unpaid' : labelFor(status);
-  return <span className={`badge ${TONE[status] ?? ''}`}>{label}</span>;
+  const text = label.charAt(0).toUpperCase() + label.slice(1);
+  return <span className={`badge ${TONE[status] ?? ''}`}>{text}</span>;
 }

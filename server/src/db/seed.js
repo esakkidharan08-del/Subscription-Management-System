@@ -1,4 +1,5 @@
 import { db, transaction } from './index.js';
+import { seedLargeDataset } from './seedLarge.js';
 import { addMonths, today } from '../lib/dates.js';
 import { hashPassword } from '../services/authService.js';
 import { changeStatus, createSubscription } from '../services/subscriptionService.js';
@@ -164,6 +165,7 @@ transaction(() => {
   seedAccounts();
   seedCatalog();
   seedSubscriptions();
+  if (process.argv.includes('--large')) seedLargeDataset();
 });
 
 console.log('Seeded accounts:');

@@ -2,6 +2,7 @@ import cookieParser from 'cookie-parser';
 import express from 'express';
 import { config } from './config.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import { checkOrigin, requestLogger, securityHeaders } from './middleware/security.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import productRoutes from './routes/products.js';
@@ -12,17 +13,21 @@ import subscriptionRoutes from './routes/subscriptions.js';
 import invoiceRoutes from './routes/invoices.js';
 import billingRoutes from './routes/billing.js';
 import discountRoutes from './routes/discounts.js';
+import dashboardRoutes from './routes/dashboard.js';
+import auditRoutes from './routes/audit.js';
 
 export function createApp() {
   const app = express();
 
   app.disable('x-powered-by');
+  app.use(securityHeaders);
+  if (!config.isTest) app.use(requestLogger);
   app.use(express.json({ limit: '100kb' }));
   app.use(cookieParser());
+  app.use(checkOrigin);
 
-  // The API has no pages of its own; send anyone who opens it to the client.
   app.get('/', (req, res) => res.redirect(config.clientUrl));
-  app.get('/api/health',(req, res) => res.json({ ok: true }));
+  app.get('/api/health', (req, res) => res.json({ ok: true }));
   app.use('/api/auth', authRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/products', productRoutes);
@@ -33,6 +38,8 @@ export function createApp() {
   app.use('/api/invoices', invoiceRoutes);
   app.use('/api/billing', billingRoutes);
   app.use('/api/discounts', discountRoutes);
+  app.use('/api/dashboard', dashboardRoutes);
+  app.use('/api/audit', auditRoutes);
 
   app.use('/api', notFoundHandler);
   app.use(errorHandler);

@@ -20,15 +20,15 @@ router.get('/:id', (req, res) => {
 });
 
 router.post('/', adminOnly, validateBody(discountSchema), (req, res) => {
-  res.status(201).json(discounts.createDiscount(req.body));
+  res.status(201).json(discounts.createDiscount(req.body, req.user));
 });
 
 router.put('/:id', adminOnly, validateBody(discountSchema), (req, res) => {
-  res.json(discounts.updateDiscount(readId(req), req.body));
+  res.json(discounts.updateDiscount(readId(req), req.body, req.user));
 });
 
 router.delete('/:id', adminOnly, (req, res) => {
-  res.json(discounts.deleteDiscount(readId(req)));
+  res.json(discounts.deleteDiscount(readId(req), req.user));
 });
 
 export default router;

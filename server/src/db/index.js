@@ -3,6 +3,7 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 import { config } from '../config.js';
+import { runMigrations } from './migrations.js';
 
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'schema.sql');
 
@@ -14,6 +15,7 @@ export function openDatabase(file = config.dbPath) {
   database.exec('PRAGMA journal_mode = WAL');
   database.exec('PRAGMA busy_timeout = 5000');
   database.exec(fs.readFileSync(schemaPath, 'utf8'));
+  runMigrations(database);
   return database;
 }
 

@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { config } from '../config.js';
 import { db, transaction } from '../db/index.js';
 import { badRequest, conflict, unauthorized } from '../lib/errors.js';
+import { recordAudit } from '../lib/audit.js';
 import { sendMail } from '../lib/mailer.js';
 
 const BCRYPT_ROUNDS = 10;
@@ -19,14 +20,16 @@ export function hashPassword(password) {
   return bcrypt.hashSync(password, BCRYPT_ROUNDS);
 }
 
-export function createUser({ name, email, password, role }) {
+export function createUser({ name, email, password, role }, actor) {
   const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
   if (existing) throw conflict('An account with this email already exists');
 
   const result = db
     .prepare('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)')
     .run(name, email, hashPassword(password), role);
-  return publicUser({ id: Number(result.lastInsertRowid), name, email, role });
+  const user = publicUser({ id: Number(result.lastInsertRowid), name, email, role });
+  if (actor) recordAudit(actor, 'user_created', 'user', user.id, { email, role });
+  return user;
 }
 
 export function signup({ name, email, password }) {
@@ -80,10 +83,32 @@ export function resetPassword({ token, password }) {
       throw badRequest('This reset link is invalid or has expired');
     }
 
-    db.prepare("UPDATE password_resets SET used_at = datetime('now') WHERE id = ?").run(reset.id);
-    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(
-      hashPassword(password),
-      reset.user_id,
-    );
+    // Burns every outstanding link for this user, not just the one used.
+    db.prepare(
+      "UPDATE password_resets SET used_at = datetime('now') WHERE user_id = ? AND used_at IS NULL",
+    ).run(reset.user_id);
+    setPassword(reset.user_id, password);
+    recordAudit({ id: reset.user_id }, 'password_reset', 'user', reset.user_id);
+  });
+}
+
+// Bumping token_version signs out every session that was issued before the change.
+function setPassword(userId, password) {
+  db.prepare(
+    'UPDATE users SET password_hash = ?, token_version = token_version + 1 WHERE id = ?',
+  ).run(hashPassword(password), userId);
+}
+
+export function changePassword(userId, { current_password, new_password }) {
+  transaction(() => {
+    const user = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(userId);
+    if (!user || !bcrypt.compareSync(current_password, user.password_hash)) {
+      throw badRequest('Your current password is incorrect');
+    }
+    if (bcrypt.compareSync(new_password, user.password_hash)) {
+      throw badRequest('Choose a password you have not used just now');
+    }
+    setPassword(userId, new_password);
+    recordAudit({ id: userId }, 'password_changed', 'user', userId);
   });
 }

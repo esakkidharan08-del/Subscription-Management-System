@@ -17,7 +17,7 @@ router.get('/', staffOnly, (req, res) => {
 });
 
 router.post('/', adminOnly, validateBody(createUserSchema), (req, res) => {
-  res.status(201).json(createUser(req.body));
+  res.status(201).json(createUser(req.body, req.user));
 });
 
 export default router;

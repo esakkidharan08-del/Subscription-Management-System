@@ -9,7 +9,11 @@ if (isProduction && !process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET must be set in production');
 }
 
+const isTest = process.env.NODE_ENV === 'test';
+
 export const config = {
+  isTest,
+  rateLimitEnabled: !isTest,
   port: Number(process.env.PORT) || 4000,
   isProduction,
   jwtSecret: process.env.JWT_SECRET || 'dev-only-secret-change-me',

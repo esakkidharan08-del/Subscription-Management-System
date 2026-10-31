@@ -10,6 +10,7 @@
     "start": "node src/index.js",
     "seed": "node src/db/seed.js",
     "seed:large": "node src/db/seed.js --large",
+    "bench": "node scripts/benchmark.js",
     "test": "node --test --test-concurrency=1 \"tests/**/*.test.js\""
   },
   "dependencies": {

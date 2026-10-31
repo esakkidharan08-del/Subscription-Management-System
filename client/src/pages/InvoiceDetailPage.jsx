@@ -8,7 +8,35 @@ import FormMessage from '../components/FormMessage.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
 import { formatMoney, labelFor, toPaise, toRupees } from '../lib/format.js';
 
-const METHODS = ['upi', 'card', 'bank_transfer', 'cash'];
+const STAFF_METHODS = ['upi', 'card', 'bank_transfer', 'cash'];
+const CUSTOMER_METHODS = ['upi', 'card'];
+
+// Customers pay the balance online; there is no real gateway, so this records the payment directly.
+function CustomerPayButton({ invoice, onPaid }) {
+  const [method, setMethod] = useState('upi');
+  const pay = useMutation({
+    mutationFn: () => billing.recordPayment(invoice.id, { method, amount: invoice.balance }),
+    onSuccess: onPaid,
+  });
+  return (
+    <div className="inline-form">
+      <h2>Pay this invoice</h2>
+      <FormMessage error={pay.error} />
+      <div className="inline-row">
+        <select value={method} onChange={(e) => setMethod(e.target.value)}>
+          {CUSTOMER_METHODS.map((m) => (
+            <option key={m} value={m}>
+              {labelFor(m)}
+            </option>
+          ))}
+        </select>
+        <button onClick={() => pay.mutate()} disabled={pay.isPending}>
+          {pay.isPending ? 'Paying…' : `Pay ${formatMoney(invoice.balance)}`}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function PaymentForm({ invoice, onPaid }) {
   const [form, setForm] = useState({
@@ -34,7 +62,7 @@ function PaymentForm({ invoice, onPaid }) {
       <FormMessage error={pay.error} />
       <div className="inline-row">
         <select value={form.method} onChange={setField('method')}>
-          {METHODS.map((method) => (
+          {STAFF_METHODS.map((method) => (
             <option key={method} value={method}>
               {labelFor(method)}
             </option>
@@ -186,6 +214,7 @@ export default function InvoiceDetailPage() {
         {isStaff && inv.status === 'confirmed' && (
           <PaymentForm key={inv.amount_paid} invoice={inv} onPaid={refresh} />
         )}
+        {!isStaff && inv.status === 'confirmed' && <CustomerPayButton invoice={inv} onPaid={refresh} />}
       </section>
     </div>
   );

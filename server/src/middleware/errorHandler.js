@@ -21,6 +21,14 @@ export function errorHandler(err, req, res, next) {
     return res.status(400).json({ error: 'Please fix the highlighted fields', fields: fieldErrors(err) });
   }
 
+  // Thrown by express.json() before any route runs.
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'The request body is not valid JSON' });
+  }
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'The request body is too large' });
+  }
+
   if (err instanceof AppError) {
     return res.status(err.status).json({ error: err.message, ...(err.details && { details: err.details }) });
   }

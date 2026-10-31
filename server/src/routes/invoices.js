@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { requireAuth, staffOnly } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
+import { today } from '../lib/dates.js';
+import { badRequest } from '../lib/errors.js';
 import { readPagination } from '../lib/pagination.js';
 import { readId } from '../lib/params.js';
 import * as invoices from '../services/invoiceService.js';
@@ -11,16 +13,29 @@ const router = Router();
 
 router.use(requireAuth);
 
-router.get('/', (req, res) => {
+function readFilters(req) {
   const isCustomer = req.user.role === 'customer';
-  const filters = {
+  return {
     status: req.query.status || null,
     overdue: req.query.overdue === 'true',
     search: req.query.search || null,
     subscriptionId: Number(req.query.subscription_id) || null,
     customerId: isCustomer ? req.user.id : Number(req.query.customer_id) || null,
   };
-  res.json(invoices.listInvoices(filters, readPagination(req.query)));
+}
+
+router.get('/', (req, res) => {
+  res.json(invoices.listInvoices(readFilters(req), readPagination(req.query)));
+});
+
+// Defined before /:id so "export.csv" isn't read as an invoice id.
+router.get('/export.csv', staffOnly, (req, res) => {
+  res.set({
+    'Content-Type': 'text/csv; charset=utf-8',
+    'Content-Disposition': `attachment; filename="invoices-${today()}.csv"`,
+  });
+  for (const line of invoices.exportInvoicesCsv(readFilters(req))) res.write(line);
+  res.end();
 });
 
 router.get('/:id', (req, res) => {
@@ -28,15 +43,27 @@ router.get('/:id', (req, res) => {
 });
 
 router.post('/:id/confirm', staffOnly, (req, res) => {
-  res.json(invoices.confirmInvoice(readId(req)));
+  res.json(invoices.confirmInvoice(readId(req), req.user));
 });
 
 router.post('/:id/cancel', staffOnly, (req, res) => {
-  res.json(invoices.cancelInvoice(readId(req)));
+  res.json(invoices.cancelInvoice(readId(req), req.user));
 });
 
-router.post('/:id/payments', staffOnly, validateBody(paymentSchema), (req, res) => {
-  res.status(201).json(recordPayment(readId(req), req.body));
+const CUSTOMER_METHODS = new Set(['card', 'upi']);
+
+// Staff record any payment. Customers can pay their own invoices online, dated today.
+router.post('/:id/payments', validateBody(paymentSchema), (req, res) => {
+  const id = readId(req);
+  let payment = req.body;
+
+  if (req.user.role === 'customer') {
+    invoices.getInvoice(id, req.user);
+    if (!CUSTOMER_METHODS.has(payment.method)) throw badRequest('Pay online with card or UPI');
+    payment = { ...payment, paid_on: today(), note: 'Paid online by customer' };
+  }
+
+  res.status(201).json(recordPayment(id, payment, req.user));
 });
 
 export default router;

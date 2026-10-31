@@ -1,4 +1,5 @@
 import { db, transaction } from '../db/index.js';
+import { recordAudit } from '../lib/audit.js';
 import { badRequest, notFound } from '../lib/errors.js';
 import { pagedResult } from '../lib/pagination.js';
 import { assertTransition } from './lifecycle.js';
@@ -130,7 +131,7 @@ export function listSubscriptions({ status, search, customerId }, paging) {
   return pagedResult(rows, total, paging);
 }
 
-export function createSubscription(data) {
+export function createSubscription(data, actor) {
   return transaction(() => {
     assertCustomerAccount(data.customer_id);
     const plan = getPlan(data.plan_id);
@@ -152,16 +153,17 @@ export function createSubscription(data) {
       );
     const id = Number(result.lastInsertRowid);
     replaceLines(id, lines);
+    recordAudit(actor, 'subscription_created', 'subscription', id, { plan_id: plan.id });
     return getSubscription(id);
   });
 }
 
-export function createFromTemplate({ template_id, ...data }) {
+export function createFromTemplate({ template_id, ...data }, actor) {
   const template = getTemplate(template_id);
-  return createSubscription({ ...data, plan_id: template.plan_id, lines: template.lines });
+  return createSubscription({ ...data, plan_id: template.plan_id, lines: template.lines }, actor);
 }
 
-export function updateSubscription(id, data) {
+export function updateSubscription(id, data, actor) {
   return transaction(() => {
     const current = getSubscription(id);
     if (!EDITABLE_STATUSES.has(current.status)) {
@@ -177,11 +179,12 @@ export function updateSubscription(id, data) {
          payment_terms = ? WHERE id = ?`,
     ).run(data.customer_id, plan.id, data.start_date, data.expiry_date, data.payment_terms, id);
     replaceLines(id, lines);
+    recordAudit(actor, 'subscription_updated', 'subscription', id);
     return getSubscription(id);
   });
 }
 
-export function changeStatus(id, nextStatus) {
+export function changeStatus(id, nextStatus, actor) {
   return transaction(() => {
     const subscription = getSubscription(id);
     assertTransition(subscription.status, nextStatus);
@@ -199,6 +202,7 @@ export function changeStatus(id, nextStatus) {
       nextBillingDate,
       id,
     );
+    recordAudit(actor, 'status_changed', 'subscription', id, { from: subscription.status, to: nextStatus });
     return getSubscription(id);
   });
 }

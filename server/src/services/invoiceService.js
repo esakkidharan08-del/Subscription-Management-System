@@ -1,4 +1,5 @@
 import { db, transaction } from '../db/index.js';
+import { recordAudit } from '../lib/audit.js';
 import { addDays, today } from '../lib/dates.js';
 import { badRequest, conflict, notFound } from '../lib/errors.js';
 import { pagedResult } from '../lib/pagination.js';
@@ -112,8 +113,7 @@ export function getInvoice(id, viewer) {
   return { ...invoice, lines, payments, balance: invoice.total - invoice.amount_paid };
 }
 
-export function listInvoices({ status, overdue, customerId, subscriptionId, search }, paging) {
-  const asOf = today();
+function invoiceFilters({ status, overdue, customerId, subscriptionId, search }, asOf) {
   const filters = [];
   const params = [];
 
@@ -137,7 +137,12 @@ export function listInvoices({ status, overdue, customerId, subscriptionId, sear
     params.push(`%${search}%`);
   }
 
-  const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
+  return { where: filters.length ? `WHERE ${filters.join(' AND ')}` : '', params };
+}
+
+export function listInvoices(criteria, paging) {
+  const asOf = today();
+  const { where, params } = invoiceFilters(criteria, asOf);
   const { total } = db.prepare(`SELECT COUNT(*) AS total FROM invoices i ${where}`).get(...params);
   const rows = db
     .prepare(
@@ -149,16 +154,62 @@ export function listInvoices({ status, overdue, customerId, subscriptionId, sear
   return pagedResult(rows, total, paging);
 }
 
-export function confirmInvoice(id) {
+const CSV_COLUMNS = [
+  'number',
+  'customer_name',
+  'subscription_number',
+  'period_start',
+  'period_end',
+  'status',
+  'due_date',
+  'subtotal',
+  'discount_total',
+  'tax_total',
+  'total',
+  'amount_paid',
+];
+
+// Quotes every field and doubles inner quotes. A leading = + - @ is prefixed so
+// a spreadsheet won't run a customer name as a formula.
+function csvField(value) {
+  let text = value === null || value === undefined ? '' : String(value);
+  if (/^[=+\-@]/.test(text)) text = `'${text}`;
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+// Money is written in rupees with two decimals, since that is what accounts expect.
+const MONEY_COLUMNS = new Set(['subtotal', 'discount_total', 'tax_total', 'total', 'amount_paid']);
+
+// A generator over a SQLite iterator, so a 50,000 row export is streamed rather
+// than built in memory.
+export function* exportInvoicesCsv(criteria) {
+  const asOf = today();
+  const { where, params } = invoiceFilters(criteria, asOf);
+  yield `${[...CSV_COLUMNS, 'overdue'].join(',')}\n`;
+
+  const rows = db
+    .prepare(`SELECT ${INVOICE_COLUMNS} ${INVOICE_JOINS} ${where} ORDER BY i.period_start DESC, i.id DESC`)
+    .iterate(asOf, ...params);
+  for (const row of rows) {
+    const fields = CSV_COLUMNS.map((column) =>
+      csvField(MONEY_COLUMNS.has(column) ? (row[column] / 100).toFixed(2) : row[column]),
+    );
+    fields.push(row.is_overdue ? '"yes"' : '"no"');
+    yield `${fields.join(',')}\n`;
+  }
+}
+
+export function confirmInvoice(id, actor) {
   return transaction(() => {
     const invoice = getInvoice(id);
     if (invoice.status !== 'draft') throw badRequest(`A ${invoice.status} invoice cannot be confirmed`);
     db.prepare("UPDATE invoices SET status = 'confirmed' WHERE id = ?").run(id);
+    recordAudit(actor, 'invoice_confirmed', 'invoice', id);
     return getInvoice(id);
   });
 }
 
-export function cancelInvoice(id) {
+export function cancelInvoice(id, actor) {
   return transaction(() => {
     const invoice = getInvoice(id);
     if (!['draft', 'confirmed'].includes(invoice.status)) {
@@ -168,6 +219,7 @@ export function cancelInvoice(id) {
       throw badRequest('This invoice has payments recorded and cannot be cancelled');
     }
     db.prepare("UPDATE invoices SET status = 'cancelled' WHERE id = ?").run(id);
+    recordAudit(actor, 'invoice_cancelled', 'invoice', id, { total: invoice.total });
     return getInvoice(id);
   });
 }

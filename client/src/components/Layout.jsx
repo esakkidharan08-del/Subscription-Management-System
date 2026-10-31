@@ -15,8 +15,14 @@ const billingLinks = [
 ];
 
 const navByRole = {
-  admin: [{ to: '/', label: 'Home' }, ...billingLinks, ...catalogLinks],
-  staff: [{ to: '/', label: 'Home' }, ...billingLinks, ...catalogLinks],
+  admin: [
+    { to: '/', label: 'Dashboard' },
+    ...billingLinks,
+    ...catalogLinks,
+    { to: '/users', label: 'Users' },
+    { to: '/activity', label: 'Activity' },
+  ],
+  staff: [{ to: '/', label: 'Dashboard' }, ...billingLinks, ...catalogLinks, { to: '/users', label: 'Users' }],
   customer: [
     { to: '/', label: 'Home' },
     { to: '/subscriptions', label: 'My subscriptions' },
@@ -47,9 +53,9 @@ export default function Layout() {
           ))}
         </nav>
         <div className="topbar-user">
-          <span>
+          <NavLink to="/account" className="account-link">
             {user.name} <small>({user.role})</small>
-          </span>
+          </NavLink>
           <button className="button-link" onClick={handleLogout}>
             Log out
           </button>

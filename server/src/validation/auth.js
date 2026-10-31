@@ -36,6 +36,11 @@ export const resetPasswordSchema = z.object({
   password: passwordField,
 });
 
+export const changePasswordSchema = z.object({
+  current_password: z.string().min(1, 'Enter your current password'),
+  new_password: passwordField,
+});
+
 export const createUserSchema = z.object({
   name: nameField,
   email: emailField,

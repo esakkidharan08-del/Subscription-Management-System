@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { invoiceExportUrl } from '../api/admin.js';
 import * as billing from '../api/billing.js';
 import { useSession } from '../auth/useSession.js';
 import Pagination from '../components/Pagination.jsx';
@@ -69,6 +70,11 @@ export default function InvoicesPage() {
     <div className="page">
       <div className="page-header">
         <h1>{isStaff ? 'Invoices' : 'My invoices'}</h1>
+        {isStaff && (
+          <a className="button-secondary button-anchor" href={invoiceExportUrl(query)}>
+            Export CSV
+          </a>
+        )}
       </div>
 
       {isStaff && <BillingRunPanel />}

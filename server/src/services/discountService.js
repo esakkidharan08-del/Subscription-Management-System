@@ -1,4 +1,5 @@
 import { db } from '../db/index.js';
+import { recordAudit } from '../lib/audit.js';
 import { notFound } from '../lib/errors.js';
 import { pagedResult } from '../lib/pagination.js';
 
@@ -35,7 +36,7 @@ function discountValues(d) {
   ];
 }
 
-export function createDiscount(discount) {
+export function createDiscount(discount, actor) {
   const result = db
     .prepare(
       `INSERT INTO discounts (name, type, value, min_amount, min_quantity, scope, product_id,
@@ -43,27 +44,32 @@ export function createDiscount(discount) {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(...discountValues(discount));
-  return getDiscount(Number(result.lastInsertRowid));
+  const id = Number(result.lastInsertRowid);
+  recordAudit(actor, 'discount_created', 'discount', id, { name: discount.name });
+  return getDiscount(id);
 }
 
-export function updateDiscount(id, discount) {
+export function updateDiscount(id, discount, actor) {
   getDiscount(id);
   db.prepare(
     `UPDATE discounts SET name = ?, type = ?, value = ?, min_amount = ?, min_quantity = ?, scope = ?,
        product_id = ?, starts_at = ?, ends_at = ?, usage_limit = ?, active = ?
      WHERE id = ?`,
   ).run(...discountValues(discount), id);
+  recordAudit(actor, 'discount_updated', 'discount', id);
   return getDiscount(id);
 }
 
 // A discount that has been used stays for the invoice history and is switched off instead.
-export function deleteDiscount(id) {
+export function deleteDiscount(id, actor) {
   const discount = getDiscount(id);
   if (discount.times_used > 0) {
     db.prepare('UPDATE discounts SET active = 0 WHERE id = ?').run(id);
+    recordAudit(actor, 'discount_deactivated', 'discount', id);
     return { deactivated: true };
   }
   db.prepare('DELETE FROM discounts WHERE id = ?').run(id);
+  recordAudit(actor, 'discount_deleted', 'discount', id, { name: discount.name });
   return { deleted: true };
 }
 

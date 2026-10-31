@@ -3,6 +3,13 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useLogin, useSession } from '../auth/useSession.js';
 import FieldError from '../components/FieldError.jsx';
 
+// Seed accounts from `npm run seed`. Shown only in development builds.
+const DEMO_ACCOUNTS = [
+  { role: 'Admin', email: 'admin@example.com', password: 'Admin@12345' },
+  { role: 'Staff', email: 'staff@example.com', password: 'Staff@12345' },
+  { role: 'Customer', email: 'customer@example.com', password: 'Customer@123' },
+];
+
 export default function LoginPage() {
   const { user } = useSession();
   const login = useLogin();
@@ -46,6 +53,24 @@ export default function LoginPage() {
           <Link to="/forgot-password">Forgot password?</Link>
           <Link to="/signup">Create an account</Link>
         </p>
+        {import.meta.env.DEV && (
+          <div className="demo-accounts">
+            <span className="detail-label">Demo accounts (dev only)</span>
+            {DEMO_ACCOUNTS.map((account) => (
+              <button
+                key={account.email}
+                type="button"
+                className="button-link"
+                onClick={() => {
+                  setEmail(account.email);
+                  setPassword(account.password);
+                }}
+              >
+                {account.role}: {account.email} / {account.password}
+              </button>
+            ))}
+          </div>
+        )}
       </form>
     </div>
   );

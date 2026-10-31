@@ -11,7 +11,7 @@ export default [
     languageOptions: { globals: globals.node },
   },
   {
-    files: ['client/**/*.{js,jsx}'],
+    files: ['frontend/**/*.{js,jsx}'],
     ...react.configs.flat.recommended,
     languageOptions: {
       ...react.configs.flat.recommended.languageOptions,

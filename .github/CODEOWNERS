@@ -27,7 +27,7 @@
 /server/tests/                              @esakkidharan08-del
 
 # D: frontend shell, navigation, customer portal, payments, dashboard
-/client/                                    @esakkidharan08-del
+/frontend/                                   @esakkidharan08-del
 /server/src/services/paymentService.js      @esakkidharan08-del
 /server/src/services/dashboardService.js    @esakkidharan08-del
 

@@ -1,4 +1,4 @@
 node_modules
-client/dist
+frontend/dist
 server/data
 package-lock.json

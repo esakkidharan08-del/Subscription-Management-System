@@ -4,7 +4,7 @@ Recurring billing for products sold on plans: quotations, subscriptions, a billi
 run that creates invoices, taxes, discounts, payments, overdue tracking, a finance
 dashboard and a customer portal.
 
-Node + Express + SQLite on the server, React + Vite on the client. It runs fully
+Node + Express + SQLite on the server, React + Vite in `frontend/`. It runs fully
 offline: no external APIs, no CDN, and email goes to the console.
 
 ## Requirements
@@ -49,7 +49,7 @@ all with the password `Customer@123`. Every email uses `example.com`, which neve
 | `npm test`                | Server tests: billing rules, roles, payments, security        |
 | `npm run lint`            | ESLint                                                        |
 | `npm run format`          | Prettier                                                      |
-| `npm run build`           | Production build of the website into `client/dist`            |
+| `npm run build`           | Production build of the website into `frontend/dist`          |
 
 Seeding is safe to repeat: it only adds what is missing. To start over, stop the
 server and delete `server/data/app.db*`.
@@ -80,7 +80,7 @@ server/src/
   db/                 schema.sql, migrations, seed and large seed
   lib/                money, dates, pagination, mailer, audit log
 server/tests/         node:test + Supertest
-client/src/
+frontend/src/
   pages/  components/  api/  styles/
 ```
 

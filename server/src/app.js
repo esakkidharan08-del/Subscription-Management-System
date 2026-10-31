@@ -8,6 +8,10 @@ import productRoutes from './routes/products.js';
 import planRoutes from './routes/plans.js';
 import taxRoutes from './routes/taxes.js';
 import quotationTemplateRoutes from './routes/quotationTemplates.js';
+import subscriptionRoutes from './routes/subscriptions.js';
+import invoiceRoutes from './routes/invoices.js';
+import billingRoutes from './routes/billing.js';
+import discountRoutes from './routes/discounts.js';
 
 export function createApp() {
   const app = express();
@@ -25,6 +29,10 @@ export function createApp() {
   app.use('/api/plans', planRoutes);
   app.use('/api/taxes', taxRoutes);
   app.use('/api/quotation-templates', quotationTemplateRoutes);
+  app.use('/api/subscriptions', subscriptionRoutes);
+  app.use('/api/invoices', invoiceRoutes);
+  app.use('/api/billing', billingRoutes);
+  app.use('/api/discounts', discountRoutes);
 
   app.use('/api', notFoundHandler);
   app.use(errorHandler);

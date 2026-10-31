@@ -17,4 +17,5 @@ export const config = {
   dbPath: process.env.DB_PATH || path.join(serverRoot, 'data', 'app.db'),
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   resetTokenMinutes: 30,
+  billingIntervalMinutes: Number(process.env.BILLING_INTERVAL_MINUTES ?? 60),
 };

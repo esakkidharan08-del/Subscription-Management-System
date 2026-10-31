@@ -8,11 +8,19 @@ const catalogLinks = [
   { to: '/templates', label: 'Templates' },
 ];
 
+const billingLinks = [
+  { to: '/subscriptions', label: 'Subscriptions' },
+  { to: '/invoices', label: 'Invoices' },
+  { to: '/discounts', label: 'Discounts' },
+];
+
 const navByRole = {
-  admin: [{ to: '/', label: 'Home' }, ...catalogLinks],
-  staff: [{ to: '/', label: 'Home' }, ...catalogLinks],
+  admin: [{ to: '/', label: 'Home' }, ...billingLinks, ...catalogLinks],
+  staff: [{ to: '/', label: 'Home' }, ...billingLinks, ...catalogLinks],
   customer: [
     { to: '/', label: 'Home' },
+    { to: '/subscriptions', label: 'My subscriptions' },
+    { to: '/invoices', label: 'My invoices' },
     { to: '/plans', label: 'Plans' },
   ],
 };
@@ -33,7 +41,7 @@ export default function Layout() {
         <span className="brand">Subscriptions</span>
         <nav>
           {navByRole[user.role].map((item) => (
-            <NavLink key={item.to} to={item.to} end>
+            <NavLink key={item.to} to={item.to} end={item.to === '/'}>
               {item.label}
             </NavLink>
           ))}

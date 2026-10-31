@@ -12,6 +12,11 @@ const ProductsPage = lazy(() => import('./pages/ProductsPage.jsx'));
 const PlansPage = lazy(() => import('./pages/PlansPage.jsx'));
 const TaxesPage = lazy(() => import('./pages/TaxesPage.jsx'));
 const TemplatesPage = lazy(() => import('./pages/TemplatesPage.jsx'));
+const SubscriptionsPage = lazy(() => import('./pages/SubscriptionsPage.jsx'));
+const SubscriptionDetailPage = lazy(() => import('./pages/SubscriptionDetailPage.jsx'));
+const InvoicesPage = lazy(() => import('./pages/InvoicesPage.jsx'));
+const InvoiceDetailPage = lazy(() => import('./pages/InvoiceDetailPage.jsx'));
+const DiscountsPage = lazy(() => import('./pages/DiscountsPage.jsx'));
 
 const loading = <p className="page-message">Loading…</p>;
 
@@ -54,6 +59,18 @@ export default function App() {
             }
           />
           <Route path="plans" element={<PlansPage />} />
+          <Route path="subscriptions" element={<SubscriptionsPage />} />
+          <Route path="subscriptions/:id" element={<SubscriptionDetailPage />} />
+          <Route path="invoices" element={<InvoicesPage />} />
+          <Route path="invoices/:id" element={<InvoiceDetailPage />} />
+          <Route
+            path="discounts"
+            element={
+              <RequireRole roles={staff}>
+                <DiscountsPage />
+              </RequireRole>
+            }
+          />
           <Route
             path="taxes"
             element={

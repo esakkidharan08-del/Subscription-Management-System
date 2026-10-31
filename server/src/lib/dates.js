@@ -28,6 +28,17 @@ export function addMonths(isoDate, months) {
   return toIsoDate(new Date(Date.UTC(date.getUTCFullYear(), targetMonth, day)));
 }
 
+// Monthly and yearly dates are counted from the subscription's start, not from
+// the last bill. Otherwise a 31st start slips to the 30th after one short month
+// and never comes back.
+export function nextBillingDate(startDate, currentDate, period) {
+  if (period !== 'monthly' && period !== 'yearly') return addBillingPeriod(currentDate, period);
+  const [startYear, startMonth] = startDate.split('-').map(Number);
+  const [currentYear, currentMonth] = currentDate.split('-').map(Number);
+  const monthsSoFar = (currentYear - startYear) * 12 + (currentMonth - startMonth);
+  return addMonths(startDate, monthsSoFar + (period === 'monthly' ? 1 : 12));
+}
+
 export function addBillingPeriod(isoDate, period) {
   switch (period) {
     case 'daily':

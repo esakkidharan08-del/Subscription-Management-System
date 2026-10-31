@@ -1,5 +1,7 @@
 import { db, transaction } from './index.js';
+import { addMonths, today } from '../lib/dates.js';
 import { hashPassword } from '../services/authService.js';
+import { changeStatus, createSubscription } from '../services/subscriptionService.js';
 
 const accounts = [
   { name: 'Admin User', email: 'admin@example.com', password: 'Admin@12345', role: 'admin' },
@@ -100,9 +102,68 @@ function seedCatalog() {
   });
 }
 
+// Starts a few months back so the first billing run has periods to catch up on.
+function seedSubscriptions() {
+  const { count } = db.prepare('SELECT COUNT(*) AS count FROM subscriptions').get();
+  if (count > 0) return;
+
+  const customerId = (email) => db.prepare('SELECT id FROM users WHERE email = ?').get(email).id;
+  const planId = (name) => db.prepare('SELECT id FROM plans WHERE name = ?').get(name).id;
+  const threeMonthsAgo = addMonths(today(), -3);
+
+  const activate = (subscription) => {
+    for (const status of ['quotation', 'confirmed', 'active']) changeStatus(subscription.id, status);
+  };
+
+  activate(
+    createSubscription({
+      customer_id: customerId('customer@example.com'),
+      plan_id: planId('ERP Monthly'),
+      start_date: threeMonthsAgo,
+      payment_terms: 'net_15',
+      lines: [],
+    }),
+  );
+  activate(
+    createSubscription({
+      customer_id: customerId('customer@example.com'),
+      plan_id: planId('Hosting Monthly'),
+      start_date: threeMonthsAgo,
+      expiry_date: addMonths(today(), 3),
+      payment_terms: 'immediate',
+      lines: [],
+    }),
+  );
+  activate(
+    createSubscription({
+      customer_id: customerId('customer2@example.com'),
+      plan_id: planId('ERP Monthly'),
+      start_date: addMonths(today(), -1),
+      payment_terms: 'net_30',
+      lines: [],
+    }),
+  );
+  createSubscription({
+    customer_id: customerId('customer2@example.com'),
+    plan_id: planId('ERP Yearly'),
+    start_date: today(),
+    payment_terms: 'net_30',
+    lines: [],
+  });
+
+  insertRow('discounts', {
+    name: 'Welcome 10%',
+    type: 'percent',
+    value: 10,
+    scope: 'subscription',
+    usage_limit: 3,
+  });
+}
+
 transaction(() => {
   seedAccounts();
   seedCatalog();
+  seedSubscriptions();
 });
 
 console.log('Seeded accounts:');

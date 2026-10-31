@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { invoiceExportUrl } from '../api/admin.js';
 import * as billing from '../api/billing.js';
 import { useSession } from '../auth/useSession.js';
@@ -52,7 +52,8 @@ export default function InvoicesPage() {
   const { user } = useSession();
   const isStaff = user.role !== 'customer';
   const [page, setPage] = useState(1);
-  const [filter, setFilter] = useState('');
+  const [searchParams] = useSearchParams();
+  const [filter, setFilter] = useState(searchParams.get('filter') ?? '');
   const [search, setSearch] = useState('');
 
   const query = {
@@ -136,7 +137,11 @@ export default function InvoicesPage() {
                     {invoice.period_start} to {invoice.period_end}
                   </td>
                   <td>
-                    <StatusBadge status={invoice.status} overdue={invoice.is_overdue} />
+                    <StatusBadge
+                      kind="invoice"
+                      status={invoice.status}
+                      overdue={invoice.is_overdue}
+                    />
                   </td>
                   <td>{invoice.due_date}</td>
                   <td className="number">{formatMoney(invoice.total)}</td>

@@ -165,7 +165,11 @@ export default function SubscriptionDetailPage() {
                     {invoice.period_start} to {invoice.period_end}
                   </td>
                   <td>
-                    <StatusBadge status={invoice.status} overdue={invoice.is_overdue} />
+                    <StatusBadge
+                      kind="invoice"
+                      status={invoice.status}
+                      overdue={invoice.is_overdue}
+                    />
                   </td>
                   <td>{invoice.due_date}</td>
                   <td className="number">{formatMoney(invoice.total)}</td>

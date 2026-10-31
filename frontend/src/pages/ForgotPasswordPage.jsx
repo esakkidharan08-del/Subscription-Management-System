@@ -1,3 +1,4 @@
+import BrandMark from '../components/BrandMark.jsx';
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -15,6 +16,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="auth-page">
+      <BrandMark />
       <form className="card auth-card" onSubmit={handleSubmit}>
         <h1>Reset password</h1>
         {request.isSuccess ? (

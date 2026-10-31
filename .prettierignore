@@ -2,3 +2,4 @@ node_modules
 frontend/dist
 server/data
 package-lock.json
+.taste-skill

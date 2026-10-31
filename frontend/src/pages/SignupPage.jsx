@@ -1,3 +1,4 @@
+import BrandMark from '../components/BrandMark.jsx';
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { signupSchema } from 'shared/validation/auth.js';
@@ -27,6 +28,7 @@ export default function SignupPage() {
 
   return (
     <div className="auth-page">
+      <BrandMark />
       <form className="card auth-card" onSubmit={handleSubmit} noValidate>
         <h1>Create an account</h1>
         {error && !Object.keys(error.fields ?? {}).length && (

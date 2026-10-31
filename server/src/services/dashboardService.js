@@ -1,5 +1,5 @@
 import { db } from '../db/index.js';
-import { addMonths, today } from '../lib/dates.js';
+import { addDays, addMonths, today } from '../lib/dates.js';
 
 // Everything here is aggregated in SQL so the dashboard stays fast with tens of
 // thousands of invoices: JavaScript only ever sees the summed rows.
@@ -102,6 +102,59 @@ function overdueInvoices(asOf) {
     .all(asOf);
 }
 
+// Unpaid balances by how late they are. Every bucket is always returned, even at
+// zero, so the screen can draw the full ladder and a reader sees nothing is 90+ late.
+const AGEING_BUCKETS = [
+  { key: 'not_due', label: 'Not yet due' },
+  { key: 'd1_30', label: '1–30 days late' },
+  { key: 'd31_60', label: '31–60 days late' },
+  { key: 'd61_90', label: '61–90 days late' },
+  { key: 'd90_plus', label: 'Over 90 days late' },
+];
+
+function receivablesAgeing(asOf) {
+  const rows = db
+    .prepare(
+      `SELECT
+         CASE
+           WHEN i.due_date >= ? THEN 'not_due'
+           WHEN julianday(?) - julianday(i.due_date) <= 30 THEN 'd1_30'
+           WHEN julianday(?) - julianday(i.due_date) <= 60 THEN 'd31_60'
+           WHEN julianday(?) - julianday(i.due_date) <= 90 THEN 'd61_90'
+           ELSE 'd90_plus'
+         END AS bucket,
+         COUNT(*) AS count,
+         SUM(i.total - COALESCE(p.paid, 0)) AS balance
+       FROM invoices i
+       LEFT JOIN (SELECT invoice_id, SUM(amount) AS paid FROM payments GROUP BY invoice_id) p
+         ON p.invoice_id = i.id
+       WHERE i.status = 'confirmed'
+       GROUP BY bucket`,
+    )
+    .all(asOf, asOf, asOf, asOf);
+  const byKey = new Map(rows.map((row) => [row.bucket, row]));
+  return AGEING_BUCKETS.map(({ key, label }) => ({
+    key,
+    label,
+    count: byKey.get(key)?.count ?? 0,
+    balance: byKey.get(key)?.balance ?? 0,
+  }));
+}
+
+// What the next billing runs will raise, before tax, so staff know what is coming.
+function upcomingBilling(asOf) {
+  const until = addDays(asOf, 7);
+  return db
+    .prepare(
+      `SELECT COUNT(DISTINCT s.id) AS subscriptions, COALESCE(SUM(sl.amount), 0) AS amount
+       FROM subscriptions s
+       JOIN subscription_lines sl ON sl.subscription_id = s.id
+       WHERE s.status = 'active' AND s.paused_at IS NULL
+         AND s.next_billing_date > ? AND s.next_billing_date <= ?`,
+    )
+    .get(asOf, until);
+}
+
 export function getDashboard() {
   const started = performance.now();
   const asOf = today();
@@ -111,6 +164,8 @@ export function getDashboard() {
     ...recurringRevenue(),
     subscriptionsByStatus: subscriptionsByStatus(),
     receivables: receivables(asOf),
+    ageing: receivablesAgeing(asOf),
+    upcoming: upcomingBilling(asOf),
     monthlyRevenue: monthlyRevenue(asOf),
     topCustomers: topCustomers(),
     overdueInvoices: overdueInvoices(asOf),

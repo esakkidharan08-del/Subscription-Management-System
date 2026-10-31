@@ -115,7 +115,7 @@ export default function InvoiceDetailPage() {
     <div className="page">
       <div className="page-header">
         <h1>
-          {inv.number} <StatusBadge status={inv.status} overdue={inv.is_overdue} />
+          {inv.number} <StatusBadge kind="invoice" status={inv.status} overdue={inv.is_overdue} />
         </h1>
         <div className="form-actions">
           {isStaff && inv.status === 'draft' && !editing && (

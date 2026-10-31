@@ -14,7 +14,19 @@ export default function PasswordChecklist({ value }) {
         const met = value.length > 0 && !failing.has(rule);
         return (
           <li key={rule} className={met ? 'rule-met' : undefined}>
-            <span aria-hidden="true">{met ? '✓' : '•'}</span>{' '}
+            <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+              {met ? (
+                <path
+                  d="M2.5 6.2 5 8.5l4.5-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                />
+              ) : (
+                <circle cx="6" cy="6" r="2" fill="currentColor" />
+              )}
+            </svg>
+            <span className="visually-hidden">{met ? 'Done: ' : 'Needed: '}</span>
             {rule.replace(/^Password (must be|needs) /, '')}
           </li>
         );

@@ -1,13 +1,15 @@
+import BrandMark from '../components/BrandMark.jsx';
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useLogin, useSession } from '../auth/useSession.js';
 import FieldError from '../components/FieldError.jsx';
 
 // Seed accounts from `npm run seed`. Shown only in development builds.
+// They are real logins on the reserved documentation domain, so it is intended here.
 const DEMO_ACCOUNTS = [
-  { role: 'Admin', email: 'admin@example.com', password: 'Admin@12345' },
-  { role: 'Staff', email: 'staff@example.com', password: 'Staff@12345' },
-  { role: 'Customer', email: 'customer@example.com', password: 'Customer@123' },
+  { role: 'Admin', email: 'admin@example.com', password: 'Admin@12345' }, // taste-skill-ignore
+  { role: 'Staff', email: 'staff@example.com', password: 'Staff@12345' }, // taste-skill-ignore
+  { role: 'Customer', email: 'customer@example.com', password: 'Customer@123' }, // taste-skill-ignore
 ];
 
 export default function LoginPage() {
@@ -26,6 +28,7 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
+      <BrandMark />
       <form className="card auth-card" onSubmit={handleSubmit}>
         <h1>Log in</h1>
         {login.error && !Object.keys(login.error.fields).length && (

@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import * as billing from '../api/billing.js';
 import * as catalog from '../api/catalog.js';
 import { useSession } from '../auth/useSession.js';
@@ -151,7 +151,8 @@ export default function SubscriptionsPage() {
   const { user } = useSession();
   const isStaff = user.role !== 'customer';
   const [page, setPage] = useState(1);
-  const [status, setStatus] = useState('');
+  const [searchParams] = useSearchParams();
+  const [status, setStatus] = useState(searchParams.get('status') ?? '');
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
 

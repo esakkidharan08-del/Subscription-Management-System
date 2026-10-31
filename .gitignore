@@ -3,3 +3,4 @@ frontend/dist/
 server/data/
 .env
 *.log
+.taste-skill/

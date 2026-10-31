@@ -1,3 +1,4 @@
+import BrandMark from '../components/BrandMark.jsx';
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -19,6 +20,7 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="auth-page">
+      <BrandMark />
       <form className="card auth-card" onSubmit={handleSubmit}>
         <h1>Choose a new password</h1>
         {reset.isSuccess ? (

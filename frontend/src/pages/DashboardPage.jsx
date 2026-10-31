@@ -4,24 +4,89 @@ import { fetchDashboard } from '../api/admin.js';
 import MonthlyBarChart from '../components/MonthlyBarChart.jsx';
 import { formatMoney } from '../lib/format.js';
 
-function StatTile({ label, value, note, to }) {
+const count = (n) => n.toLocaleString('en-IN');
+
+function plural(n, one, many = `${one}s`) {
+  return `${count(n)} ${n === 1 ? one : many}`;
+}
+
+function formatDate(iso) {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+// The screen's question: how much are we owed, and how late is it?
+function finding(d) {
+  const oldest = d.overdueInvoices[0];
+  if (!d.receivables.overdue_count) {
+    return `Nothing is overdue. ${formatMoney(d.receivables.outstanding)} is out on invoices not yet due.`;
+  }
+  return `${formatMoney(d.receivables.overdue)} is overdue on ${plural(d.receivables.overdue_count, 'invoice')}. The oldest was due ${formatDate(oldest.due_date)}.`;
+}
+
+function Kpi({ label, value, note, bad, lead, zero, to }) {
+  const className = ['kpi', lead && 'kpi-lead', zero && 'is-zero'].filter(Boolean).join(' ');
   const body = (
     <>
-      <span className="stat-label">{label}</span>
-      <span className="stat-value">{value}</span>
-      {note && <span className="stat-note">{note}</span>}
+      <span className="kpi-label">{label}</span>
+      <span className="kpi-value">{value}</span>
+      {note && <span className={bad ? 'kpi-note is-bad' : 'kpi-note'}>{note}</span>}
     </>
   );
   return to ? (
-    <Link to={to} className="card stat-tile stat-link">
+    <Link to={to} className={className}>
       {body}
     </Link>
   ) : (
-    <div className="card stat-tile">{body}</div>
+    <div className={className}>{body}</div>
   );
 }
 
-const STATUS_ORDER = ['draft', 'quotation', 'confirmed', 'active', 'closed'];
+// Unpaid money laddered by lateness. Each bar is that bucket's share of the
+// largest bucket; anything already late is the one place red appears.
+function AgeingCard({ ageing, outstanding }) {
+  const largest = Math.max(...ageing.map((b) => b.balance), 1);
+  return (
+    <section className="card" aria-labelledby="ageing-title">
+      <div className="card-head">
+        <h2 id="ageing-title">Receivables by age</h2>
+        <Link to="/invoices?filter=confirmed" className="hint">
+          View unpaid
+        </Link>
+      </div>
+      {ageing.map((bucket) => (
+        <div
+          key={bucket.key}
+          className={
+            bucket.key !== 'not_due' && bucket.balance > 0 ? 'ageing-row is-late' : 'ageing-row'
+          }
+        >
+          <span>
+            {bucket.label}
+            <span className="cell-sub">{plural(bucket.count, 'invoice')}</span>
+          </span>
+          <span className="num" style={{ color: bucket.balance ? undefined : 'var(--muted)' }}>
+            {formatMoney(bucket.balance)}
+          </span>
+          <div className="ageing-track" aria-hidden="true">
+            <div
+              className="ageing-fill"
+              style={{ width: `${(bucket.balance / largest) * 100}%` }}
+            />
+          </div>
+        </div>
+      ))}
+      <div className="ageing-total">
+        <span>Outstanding</span>
+        <span className="num">{formatMoney(outstanding)}</span>
+      </div>
+    </section>
+  );
+}
 
 export default function DashboardPage() {
   const dashboard = useQuery({
@@ -30,100 +95,144 @@ export default function DashboardPage() {
     staleTime: 60_000,
   });
 
-  if (dashboard.isLoading) return <p className="page-message">Loading…</p>;
-  if (dashboard.error) return <p className="form-error">{dashboard.error.message}</p>;
+  if (dashboard.isLoading) return <p className="page-message">Loading the overview…</p>;
+  if (dashboard.error) {
+    return (
+      <div className="page">
+        <h1>Overview</h1>
+        <p className="form-error">
+          Couldn&rsquo;t load the overview. {dashboard.error.message}{' '}
+          <button className="button-link" onClick={() => dashboard.refetch()}>
+            Retry
+          </button>
+        </p>
+      </div>
+    );
+  }
 
   const d = dashboard.data;
-  const collectedThisYear = d.monthlyRevenue.reduce((sum, m) => sum + m.collected, 0);
+  const updated = new Date(dashboard.dataUpdatedAt).toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const statuses = d.subscriptionsByStatus;
+  const waiting = (statuses.quotation ?? 0) + (statuses.draft ?? 0);
 
   return (
     <div className="page">
       <div className="page-header">
-        <h1>Finance dashboard</h1>
-        <span className="hint">
-          As of {d.asOf} · calculated in {d.queryMs} ms
-        </span>
+        <div>
+          <h1>Overview</h1>
+          <p className="page-subline">{finding(d)}</p>
+        </div>
+        <div className="form-actions">
+          <span className="hint" title={`Calculated in ${d.queryMs} ms`}>
+            Updated {updated}
+          </span>
+          <Link to="/invoices" className="button-anchor button-secondary">
+            Run billing
+          </Link>
+          <Link to="/invoices?filter=overdue" className="button-anchor button">
+            Chase overdue
+          </Link>
+        </div>
       </div>
 
-      <div className="stat-grid">
-        <StatTile label="Monthly recurring revenue" value={formatMoney(d.mrr)} note="Before tax" />
-        <StatTile
-          label="Active subscriptions"
-          value={d.activeSubscriptions.toLocaleString('en-IN')}
-          to="/subscriptions"
-        />
-        <StatTile
+      <div
+        className="kpi-strip"
+        style={{ '--kpi-columns': 'minmax(0, 1.45fr) repeat(4, minmax(0, 1fr))' }}
+      >
+        <Kpi
+          lead
           label="Outstanding"
           value={formatMoney(d.receivables.outstanding)}
-          note={`${d.receivables.open_count.toLocaleString('en-IN')} unpaid invoices`}
-          to="/invoices"
+          note={plural(d.receivables.open_count, 'unpaid invoice')}
+          to="/invoices?filter=confirmed"
         />
-        <StatTile
+        <Kpi
           label="Overdue"
           value={formatMoney(d.receivables.overdue)}
-          note={`${d.receivables.overdue_count.toLocaleString('en-IN')} invoices past due`}
-          to="/invoices"
+          note={
+            d.receivables.overdue_count
+              ? `${plural(d.receivables.overdue_count, 'invoice')} past due`
+              : 'None past due'
+          }
+          bad={d.receivables.overdue_count > 0}
+          to="/invoices?filter=overdue"
+        />
+        <Kpi
+          label="Billing in the next 7 days"
+          zero={d.upcoming.amount === 0}
+          value={formatMoney(d.upcoming.amount)}
+          note={`${plural(d.upcoming.subscriptions, 'subscription')}, before tax`}
+        />
+        <Kpi
+          label="Monthly recurring revenue"
+          value={formatMoney(d.mrr)}
+          note="Monthly equivalent, before tax"
+        />
+        <Kpi
+          label="Active subscriptions"
+          value={count(d.activeSubscriptions)}
+          note={
+            waiting
+              ? `${plural(waiting, 'draft or quote', 'drafts and quotes')} waiting`
+              : 'No quotes waiting'
+          }
+          to="/subscriptions?status=active"
         />
       </div>
 
-      <MonthlyBarChart
-        data={d.monthlyRevenue}
-        valueKey="collected"
-        title={`Payments collected per month · ${formatMoney(collectedThisYear)} in 12 months`}
-      />
+      <div className="overview-main">
+        <MonthlyBarChart data={d.monthlyRevenue} />
+        <AgeingCard ageing={d.ageing} outstanding={d.receivables.outstanding} />
+      </div>
 
       <div className="two-column">
-        <section className="card">
-          <h2>Oldest overdue invoices</h2>
+        <section className="card" aria-labelledby="overdue-title">
+          <div className="card-head">
+            <h2 id="overdue-title">Oldest overdue</h2>
+            <Link to="/invoices?filter=overdue" className="hint">
+              View all {count(d.receivables.overdue_count)}
+            </Link>
+          </div>
           {d.overdueInvoices.length ? (
-            <table>
-              <tbody>
-                {d.overdueInvoices.map((invoice) => (
-                  <tr key={invoice.id}>
-                    <td>
-                      <Link to={`/invoices/${invoice.id}`}>{invoice.number}</Link>
-                      <div className="hint">{invoice.customer_name}</div>
-                    </td>
-                    <td>Due {invoice.due_date}</td>
-                    <td className="number">{formatMoney(invoice.balance)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            d.overdueInvoices.slice(0, 5).map((invoice) => (
+              <div className="list-row" key={invoice.id}>
+                <span>
+                  <Link to={`/invoices/${invoice.id}`}>{invoice.number}</Link>
+                  <span className="cell-sub">{invoice.customer_name}</span>
+                </span>
+                <span className="num">
+                  {formatMoney(invoice.balance)}
+                  <span className="cell-sub">Due {formatDate(invoice.due_date)}</span>
+                </span>
+              </div>
+            ))
           ) : (
-            <p className="hint">Nothing overdue.</p>
+            <p className="empty-state">
+              Nothing is overdue. Unpaid invoices appear here once they pass their due date.
+            </p>
           )}
         </section>
 
-        <section className="card">
-          <h2>Top customers by payments</h2>
+        <section className="card" aria-labelledby="customers-title">
+          <div className="card-head">
+            <h2 id="customers-title">Top customers by payments</h2>
+            <span className="hint">All time</span>
+          </div>
           {d.topCustomers.length ? (
-            <table>
-              <tbody>
-                {d.topCustomers.map((customer) => (
-                  <tr key={customer.id}>
-                    <td>{customer.name}</td>
-                    <td className="number">{formatMoney(customer.paid)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            d.topCustomers.slice(0, 5).map((customer, i) => (
+              <div className="list-row" key={customer.id}>
+                <span>
+                  {i + 1}. {customer.name}
+                </span>
+                <span className="num">{formatMoney(customer.paid)}</span>
+              </div>
+            ))
           ) : (
-            <p className="hint">No payments yet.</p>
+            <p className="empty-state">No payments recorded yet.</p>
           )}
-          <h2 className="section-gap">Subscriptions by status</h2>
-          <table>
-            <tbody>
-              {STATUS_ORDER.map((status) => (
-                <tr key={status}>
-                  <td className="capitalize">{status}</td>
-                  <td className="number">
-                    {(d.subscriptionsByStatus[status] ?? 0).toLocaleString('en-IN')}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </section>
       </div>
     </div>

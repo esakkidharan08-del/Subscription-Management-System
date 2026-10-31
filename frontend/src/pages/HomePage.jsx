@@ -12,26 +12,40 @@ function CustomerHome({ user }) {
   const s = summary.data?.customer;
 
   return (
-    <div className="page">
+    <div className="page narrow">
       <div className="page-header">
-        <h1>Welcome, {user.name}</h1>
+        <div>
+          <h1>{user.name}</h1>
+          <p className="page-subline">
+            {!s
+              ? 'Loading your account…'
+              : s.balance_due > 0
+                ? `You owe ${formatMoney(s.balance_due)}. Open an invoice to pay it by UPI or card.`
+                : 'You are all paid up.'}
+          </p>
+        </div>
+        {s?.balance_due > 0 && (
+          <Link to="/invoices?filter=confirmed" className="button-anchor button">
+            Pay invoices
+          </Link>
+        )}
       </div>
       {s && (
-        <div className="stat-grid">
-          <Link to="/subscriptions" className="card stat-tile stat-link">
-            <span className="stat-label">Active subscriptions</span>
-            <span className="stat-value">{s.active_subscriptions}</span>
+        <div className="kpi-strip" style={{ '--kpi-columns': 'repeat(2, minmax(0, 1fr))' }}>
+          <Link to="/invoices?filter=confirmed" className="kpi kpi-lead">
+            <span className="kpi-label">Balance due</span>
+            <span className="kpi-value">{formatMoney(s.balance_due)}</span>
+            <span className={s.overdue_count ? 'kpi-note is-bad' : 'kpi-note'}>
+              {s.overdue_count ? `${s.overdue_count} past due` : 'Nothing past due'}
+            </span>
           </Link>
-          <Link to="/invoices" className="card stat-tile stat-link">
-            <span className="stat-label">Balance due</span>
-            <span className="stat-value">{formatMoney(s.balance_due)}</span>
-            {s.overdue_count > 0 && (
-              <span className="stat-note danger">{s.overdue_count} overdue</span>
-            )}
+          <Link to="/subscriptions" className="kpi">
+            <span className="kpi-label">Active subscriptions</span>
+            <span className="kpi-value">{s.active_subscriptions}</span>
+            <span className="kpi-note">View your plans and next bills</span>
           </Link>
         </div>
       )}
-      <p className="hint">Open an invoice to pay it online with card or UPI.</p>
     </div>
   );
 }

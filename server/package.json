@@ -11,7 +11,8 @@
     "seed": "node src/db/seed.js",
     "seed:large": "node src/db/seed.js --large",
     "bench": "node scripts/benchmark.js",
-    "test": "node --test --test-concurrency=1 \"tests/**/*.test.js\""
+    "test": "node --test --test-concurrency=1 \"tests/**/*.test.js\"",
+    "seed:fresh": "node src/db/seed.js --large --fresh"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

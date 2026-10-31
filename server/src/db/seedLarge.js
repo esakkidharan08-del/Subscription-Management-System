@@ -65,7 +65,9 @@ function insertCustomers(random) {
 }
 
 // What happened to one invoice by today, given who the customer is.
-function invoiceOutcome(random, payer, dueDate, asOf) {
+// lateShift is extra days added to everyone's payments in a bad month (a bank
+// holiday stretch, the year-end rush), which moves money between months.
+function invoiceOutcome(random, payer, dueDate, asOf, lateShift = 0) {
   const habit = PAYERS[payer];
   const daysLate = daysBetween(dueDate, asOf);
 
@@ -73,8 +75,10 @@ function invoiceOutcome(random, payer, dueDate, asOf) {
     // Not due yet: most are waiting, prompt payers often settle early, and a
     // few fresh ones still sit as drafts for staff to review.
     if (random.chance(0.06)) return { status: 'draft' };
-    if (random.chance(habit.earlyWhenNotDue)) {
-      return { status: 'paid', paidOn: addDays(dueDate, -random.int(1, 10)) };
+    const earlyOn = addDays(dueDate, -random.int(1, 10));
+    // Paying early only counts if that day has already happened.
+    if (earlyOn <= asOf && random.chance(habit.earlyWhenNotDue)) {
+      return { status: 'paid', paidOn: earlyOn };
     }
     return { status: 'confirmed' };
   }
@@ -82,7 +86,7 @@ function invoiceOutcome(random, payer, dueDate, asOf) {
   if (daysLate > 45 && random.chance(0.015)) return { status: 'cancelled' };
   if (!random.chance(habit.paysAtAll)) return { status: 'confirmed' };
 
-  const payAfter = random.int(habit.payDays[0], habit.payDays[1]);
+  const payAfter = random.int(habit.payDays[0], habit.payDays[1]) + lateShift;
   if (payAfter > daysLate) return { status: 'confirmed' };
 
   const paidOn = addDays(dueDate, payAfter);
@@ -122,6 +126,35 @@ export function seedLargeDataset() {
   // neighbouring invoice numbers belong to different customers, as they would
   // after months of real billing runs.
   const pending = [];
+
+  // Signups are uneven: busy around the March year end and the Diwali season,
+  // quiet in between, with plenty of noise. Older months hold the existing
+  // customer base, so the chart moves with the business instead of only climbing.
+  const startMonths = [];
+  for (let back = 2; back <= 30; back++) {
+    const month = Number(addMonths(asOf, -back).slice(5, 7));
+    const festive = [3, 4, 10, 11].includes(month) ? 1.8 : 1;
+    const base = back > 14 ? 1.6 : 1;
+    startMonths.push([back, base * festive * (0.35 + random.next() * 1.3)]);
+  }
+
+  // Some months everyone pays late, so takings slip into the following month.
+  const lateShiftByMonth = new Map();
+  const lateShiftFor = (date) => {
+    const month = date.slice(0, 7);
+    if (!lateShiftByMonth.has(month)) {
+      lateShiftByMonth.set(
+        month,
+        random.weighted([
+          [0, 6],
+          [5, 3],
+          [12, 2],
+          [25, 1],
+        ]),
+      );
+    }
+    return lateShiftByMonth.get(month);
+  };
 
   function addSubscription(billed) {
     const id = subId++;
@@ -176,14 +209,14 @@ export function seedLargeDataset() {
       return;
     }
 
-    // Started anywhere from 2 to 16 months ago, on any day of the month.
-    const startDate = addDays(addMonths(asOf, -random.int(2, 16)), -random.int(0, 27));
-    // About one in ten stopped after a few months.
-    const stoppedAfter = random.chance(0.1) ? random.int(2, 8) : null;
+    const startDate = addDays(addMonths(asOf, -random.weighted(startMonths)), -random.int(0, 27));
+    // Each month a few customers cancel; a cancelled subscription bills no more.
+    const monthlyChurn = random.pick([0.015, 0.025, 0.04]);
 
     let periodStart = startDate;
     let months = 0;
-    while (periodStart <= asOf && (stoppedAfter === null || months < stoppedAfter)) {
+    let stopped = false;
+    while (periodStart <= asOf && !stopped) {
       const nextStart = nextBillingDate(startDate, periodStart, 'monthly');
       const discount = random.chance(0.05) ? Math.round(amount * 0.1) : 0;
       const taxable = amount - discount;
@@ -204,13 +237,14 @@ export function seedLargeDataset() {
         dueDate,
         // Billing runs at different times of day; this also mixes the order within a date.
         createdAt: `${periodStart} ${String(random.int(0, 23)).padStart(2, '0')}:${String(random.int(0, 59)).padStart(2, '0')}:00`,
-        outcome: invoiceOutcome(random, customer.payer, dueDate, asOf),
+        outcome: invoiceOutcome(random, customer.payer, dueDate, asOf, lateShiftFor(dueDate)),
       });
       periodStart = nextStart;
       months += 1;
+      stopped = months >= 2 && random.chance(monthlyChurn);
     }
 
-    const closed = stoppedAfter !== null;
+    const closed = stopped;
     insertSub.run(
       id,
       `SUB-${pad(id)}`,
@@ -311,4 +345,32 @@ function writeInvoices(random, pending) {
       );
     }
   }
+}
+
+// Seed accounts that --fresh keeps; every other customer on a reserved example
+// domain was made by this file and is replaced.
+const KEEP_EMAILS = ['customer@example.com', 'customer2@example.com'];
+
+// Removes the sample customers and everything hanging off them, so the large
+// dataset can be regenerated without deleting the database file (which Windows
+// will not allow while the server has it open).
+export function removeLargeDataset() {
+  const sample = `
+    SELECT id FROM users
+    WHERE role = 'customer'
+      AND email NOT IN (${KEEP_EMAILS.map(() => '?').join(', ')})
+      AND (email LIKE '%@example.com' OR email LIKE '%@example.net'
+        OR email LIKE '%@example.org' OR email LIKE '%.example')`;
+  const subs = `SELECT id FROM subscriptions WHERE customer_id IN (${sample})`;
+  const invoices = `SELECT id FROM invoices WHERE customer_id IN (${sample})`;
+
+  const run = (sql, times) => db.prepare(sql).run(...Array(times).fill(KEEP_EMAILS).flat()).changes;
+  run(`DELETE FROM payments WHERE invoice_id IN (${invoices})`, 1);
+  run(`DELETE FROM invoice_lines WHERE invoice_id IN (${invoices})`, 1);
+  run(`DELETE FROM invoices WHERE customer_id IN (${sample})`, 1);
+  run(`DELETE FROM subscription_lines WHERE subscription_id IN (${subs})`, 1);
+  run(`DELETE FROM subscriptions WHERE customer_id IN (${sample})`, 1);
+  run(`UPDATE audit_log SET actor_id = NULL WHERE actor_id IN (${sample})`, 1);
+  const removed = run(`DELETE FROM users WHERE id IN (${sample})`, 1);
+  console.log(`Removed ${removed} sample customers and their records.`);
 }

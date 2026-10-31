@@ -14,7 +14,8 @@
     "test": "npm test -w server",
     "build": "npm run build -w frontend",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "seed:fresh": "npm run seed:fresh -w server"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

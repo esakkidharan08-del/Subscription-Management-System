@@ -49,10 +49,12 @@ function receivables(asOf) {
     .get(asOf, asOf);
 }
 
-// Twelve calendar months, oldest first, with zero-filled gaps so a quiet month
+// The chosen number of calendar months, oldest first, with zero-filled gaps so a quiet month
 // still shows as a month rather than vanishing from the chart.
-function monthlyRevenue(asOf) {
-  const months = Array.from({ length: 12 }, (_, i) => addMonths(asOf, i - 11).slice(0, 7));
+function monthlyRevenue(asOf, count) {
+  const months = Array.from({ length: count }, (_, i) =>
+    addMonths(asOf, i - count + 1).slice(0, 7),
+  );
   const from = `${months[0]}-01`;
 
   const billed = db
@@ -155,7 +157,11 @@ function upcomingBilling(asOf) {
     .get(asOf, until);
 }
 
-export function getDashboard() {
+export const DASHBOARD_PERIODS = [3, 6, 12, 24];
+
+// months is the reporting window for the chart and its totals; the balances
+// (outstanding, overdue, ageing) are always as of today.
+export function getDashboard({ months = 12 } = {}) {
   const started = performance.now();
   const asOf = today();
 
@@ -166,9 +172,14 @@ export function getDashboard() {
     receivables: receivables(asOf),
     ageing: receivablesAgeing(asOf),
     upcoming: upcomingBilling(asOf),
-    monthlyRevenue: monthlyRevenue(asOf),
+    months,
+    monthlyRevenue: monthlyRevenue(asOf, months),
     topCustomers: topCustomers(),
     overdueInvoices: overdueInvoices(asOf),
+  };
+  dashboard.periodTotals = {
+    billed: dashboard.monthlyRevenue.reduce((sum, m) => sum + m.billed, 0),
+    collected: dashboard.monthlyRevenue.reduce((sum, m) => sum + m.collected, 0),
   };
   // Reported so the demo can state how long the numbers took on the large seed.
   dashboard.queryMs = Math.round((performance.now() - started) * 10) / 10;

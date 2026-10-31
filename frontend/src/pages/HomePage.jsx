@@ -8,7 +8,7 @@ import { formatMoney } from '../lib/format.js';
 const DashboardPage = lazy(() => import('./DashboardPage.jsx'));
 
 function CustomerHome({ user }) {
-  const summary = useQuery({ queryKey: ['dashboard', 'me'], queryFn: fetchDashboard });
+  const summary = useQuery({ queryKey: ['dashboard', 'me'], queryFn: () => fetchDashboard() });
   const s = summary.data?.customer;
 
   return (

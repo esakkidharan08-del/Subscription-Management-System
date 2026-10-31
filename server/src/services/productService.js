@@ -34,12 +34,39 @@ export function getProduct(id) {
   return withVariants([product])[0];
 }
 
+// Variants are matched by attribute and value, so ones already chosen on a
+// subscription keep their id and only their price changes. A variant that is
+// removed while a subscription still uses it is refused.
 function replaceVariants(productId, variants) {
-  db.prepare('DELETE FROM product_variants WHERE product_id = ?').run(productId);
+  const existing = db.prepare('SELECT * FROM product_variants WHERE product_id = ?').all(productId);
+  const key = (v) => `${v.attribute}=${v.value}`;
+  const wanted = new Map(variants.map((v) => [key(v), v]));
+
+  for (const old of existing) {
+    const next = wanted.get(key(old));
+    if (next) {
+      db.prepare('UPDATE product_variants SET price_delta = ? WHERE id = ?').run(
+        next.price_delta,
+        old.id,
+      );
+      wanted.delete(key(old));
+      continue;
+    }
+    const { used } = db
+      .prepare('SELECT COUNT(*) AS used FROM subscription_lines WHERE variant_id = ?')
+      .get(old.id);
+    if (used > 0) {
+      throw conflict(
+        `The ${old.attribute} "${old.value}" variant is on subscriptions and cannot be removed`,
+      );
+    }
+    db.prepare('DELETE FROM product_variants WHERE id = ?').run(old.id);
+  }
+
   const insert = db.prepare(
     'INSERT INTO product_variants (product_id, attribute, value, price_delta) VALUES (?, ?, ?, ?)',
   );
-  for (const variant of variants) {
+  for (const variant of wanted.values()) {
     insert.run(productId, variant.attribute, variant.value, variant.price_delta);
   }
 }

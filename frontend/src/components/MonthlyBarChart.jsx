@@ -42,7 +42,7 @@ function monthName(month, style = 'short') {
 
 // One series at a time, switched by the control in the header. Past months are
 // ink; the current month is the one hue, because it is the figure still moving.
-export default function MonthlyBarChart({ data }) {
+export default function MonthlyBarChart({ data, totals }) {
   const [seriesKey, setSeriesKey] = useState('collected');
   const [active, setActive] = useState(data.length - 1);
 
@@ -56,13 +56,21 @@ export default function MonthlyBarChart({ data }) {
   const y = (v) => PAD.top + plotH - (v / top) * plotH;
   const baseline = y(0);
 
+  const labelStep = Math.max(1, Math.ceil(data.length / 6));
   const shown = data[active];
   const series = SERIES.find((s) => s.key === seriesKey);
 
   return (
     <section className="card" aria-labelledby="revenue-title">
       <div className="card-head">
-        <h2 id="revenue-title">{series.label} per month</h2>
+        <h2 id="revenue-title">
+          {series.label} per month
+          {totals && (
+            <span className="card-head-total">
+              {formatMoney(totals[seriesKey])} in {data.length} months
+            </span>
+          )}
+        </h2>
         <div className="segmented" role="group" aria-label="Series">
           {SERIES.map((s) => (
             <button
@@ -85,7 +93,7 @@ export default function MonthlyBarChart({ data }) {
         className="chart"
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         role="img"
-        aria-label={`${series.label} per month for the last 12 months`}
+        aria-label={`${series.label} per month for the last ${data.length} months`}
         onMouseLeave={() => setActive(data.length - 1)}
       >
         {ticks.map((tick) => (
@@ -108,8 +116,8 @@ export default function MonthlyBarChart({ data }) {
           const x = PAD.left + i * slot + (slot - barW) / 2;
           const r = Math.min(3, h);
           const isCurrent = i === data.length - 1;
-          // Every other month is labelled, counted back from the current one.
-          const labelled = (data.length - 1 - i) % 2 === 0;
+          // About six labels whatever the window, counted back from the current month.
+          const labelled = (data.length - 1 - i) % labelStep === 0;
           return (
             <g key={d.month}>
               <rect

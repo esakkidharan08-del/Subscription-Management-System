@@ -24,3 +24,7 @@ export function toNumberOrNull(value) {
 }
 
 export const labelFor = (value) => value.replace(/_/g, ' ');
+
+const METHOD_LABELS = { upi: 'UPI', bank_transfer: 'Bank transfer', card: 'Card', cash: 'Cash' };
+
+export const methodLabel = (method) => METHOD_LABELS[method] ?? labelFor(method);

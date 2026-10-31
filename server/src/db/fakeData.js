@@ -194,16 +194,13 @@ const COMPANY_TRADE = [
 
 const COMPANY_SUFFIX = ['Pvt Ltd', 'Pvt Ltd', 'LLP', '& Co', '', ''];
 
-const PAYMENT_NOTES = [
-  'NEFT received',
-  'UPI ref on receipt',
-  'Cheque cleared',
-  'Paid at branch counter',
-  'Card auto-debit',
-  'Paid after reminder call',
-  'Part payment, balance next week',
-  'RTGS received',
-];
+// Notes match how the money came in, the way a clerk would write them.
+const PAYMENT_NOTES = {
+  upi: ['UPI ref on receipt', 'Paid by GPay', 'PhonePe, ref noted'],
+  bank_transfer: ['NEFT received', 'RTGS received', 'IMPS from current account'],
+  card: ['Card auto-debit', 'Paid by card online'],
+  cash: ['Paid at branch counter', 'Cash, receipt issued'],
+};
 
 // Only reserved domains (RFC 2606): example.com, .net, .org and the .example
 // TLD. None of these can ever deliver mail to a real person.
@@ -266,6 +263,9 @@ export function fakeCustomer(random, takenEmails) {
   return { name, email: candidate };
 }
 
-export function fakePaymentNote(random) {
-  return random.chance(0.3) ? random.pick(PAYMENT_NOTES) : null;
+export function fakePaymentNote(random, method) {
+  if (!random.chance(0.3)) return null;
+  // A late payer's note is about the chase, whatever the method.
+  if (random.chance(0.15)) return 'Paid after reminder call';
+  return random.pick(PAYMENT_NOTES[method] ?? PAYMENT_NOTES.upi);
 }

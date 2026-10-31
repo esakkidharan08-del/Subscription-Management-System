@@ -198,10 +198,33 @@ function seedPausablePlan() {
   });
 }
 
+// Optional extras customers switch on and off from their own subscription page.
+function seedAddons() {
+  const exists = db.prepare("SELECT 1 FROM products WHERE type = 'addon'").get();
+  const gst = db.prepare("SELECT id FROM taxes WHERE name = 'GST 18%'").get();
+  if (exists || !gst) return;
+  insertRow('products', {
+    name: 'Priority Support',
+    type: 'addon',
+    sales_price: 49900,
+    cost_price: 15000,
+    notes: 'Four-hour response on working days',
+  });
+  insertRow('products', {
+    name: 'Extra Storage 100 GB',
+    type: 'addon',
+    sales_price: 19900,
+    cost_price: 6000,
+    notes: 'Billed per 100 GB block',
+  });
+  insertRow('tax_rules', { tax_id: gst.id, category: 'addon', priority: 0 });
+}
+
 transaction(() => {
   seedAccounts();
   seedCatalog();
   seedPausablePlan();
+  seedAddons();
   seedSubscriptions();
   if (process.argv.includes('--fresh')) removeLargeDataset();
   if (process.argv.includes('--large')) seedLargeDataset();

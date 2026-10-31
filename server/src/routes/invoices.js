@@ -46,6 +46,10 @@ router.put('/:id', staffOnly, validateBody(invoiceEditSchema), (req, res) => {
   res.json(invoices.updateDraftInvoice(readId(req), req.body, req.user));
 });
 
+router.post('/:id/send', staffOnly, async (req, res) => {
+  res.json(await invoices.sendInvoice(readId(req), req.user));
+});
+
 router.post('/:id/confirm', staffOnly, (req, res) => {
   res.json(invoices.confirmInvoice(readId(req), req.user));
 });

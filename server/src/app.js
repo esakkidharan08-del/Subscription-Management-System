@@ -11,6 +11,7 @@ import taxRoutes from './routes/taxes.js';
 import quotationTemplateRoutes from './routes/quotationTemplates.js';
 import subscriptionRoutes from './routes/subscriptions.js';
 import invoiceRoutes from './routes/invoices.js';
+import paymentRoutes from './routes/payments.js';
 import billingRoutes from './routes/billing.js';
 import discountRoutes from './routes/discounts.js';
 import dashboardRoutes from './routes/dashboard.js';
@@ -36,6 +37,7 @@ export function createApp() {
   app.use('/api/quotation-templates', quotationTemplateRoutes);
   app.use('/api/subscriptions', subscriptionRoutes);
   app.use('/api/invoices', invoiceRoutes);
+  app.use('/api/payments', paymentRoutes);
   app.use('/api/billing', billingRoutes);
   app.use('/api/discounts', discountRoutes);
   app.use('/api/dashboard', dashboardRoutes);

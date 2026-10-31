@@ -16,6 +16,7 @@ const SubscriptionsPage = lazy(() => import('./pages/SubscriptionsPage.jsx'));
 const SubscriptionDetailPage = lazy(() => import('./pages/SubscriptionDetailPage.jsx'));
 const InvoicesPage = lazy(() => import('./pages/InvoicesPage.jsx'));
 const InvoiceDetailPage = lazy(() => import('./pages/InvoiceDetailPage.jsx'));
+const PaymentsPage = lazy(() => import('./pages/PaymentsPage.jsx'));
 const DiscountsPage = lazy(() => import('./pages/DiscountsPage.jsx'));
 const UsersPage = lazy(() => import('./pages/UsersPage.jsx'));
 const AuditPage = lazy(() => import('./pages/AuditPage.jsx'));
@@ -66,6 +67,7 @@ export default function App() {
           <Route path="subscriptions/:id" element={<SubscriptionDetailPage />} />
           <Route path="invoices" element={<InvoicesPage />} />
           <Route path="invoices/:id" element={<InvoiceDetailPage />} />
+          <Route path="payments" element={<PaymentsPage />} />
           <Route path="account" element={<AccountPage />} />
           <Route
             path="users"

@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchDashboard } from '../api/admin.js';
 import MonthlyBarChart from '../components/MonthlyBarChart.jsx';
@@ -88,11 +89,15 @@ function AgeingCard({ ageing, outstanding }) {
   );
 }
 
+const PERIODS = [3, 6, 12, 24];
+
 export default function DashboardPage() {
+  const [months, setMonths] = useState(12);
   const dashboard = useQuery({
-    queryKey: ['dashboard'],
-    queryFn: fetchDashboard,
+    queryKey: ['dashboard', { months }],
+    queryFn: () => fetchDashboard(months),
     staleTime: 60_000,
+    placeholderData: keepPreviousData,
   });
 
   if (dashboard.isLoading) return <p className="page-message">Loading the overview…</p>;
@@ -126,6 +131,13 @@ export default function DashboardPage() {
           <p className="page-subline">{finding(d)}</p>
         </div>
         <div className="form-actions">
+          <div className="segmented" role="group" aria-label="Reporting period">
+            {PERIODS.map((p) => (
+              <button key={p} aria-pressed={p === months} onClick={() => setMonths(p)}>
+                {p} months
+              </button>
+            ))}
+          </div>
           <span className="hint" title={`Calculated in ${d.queryMs} ms`}>
             Updated {updated}
           </span>
@@ -184,7 +196,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="overview-main">
-        <MonthlyBarChart data={d.monthlyRevenue} />
+        <MonthlyBarChart key={months} data={d.monthlyRevenue} totals={d.periodTotals} />
         <AgeingCard ageing={d.ageing} outstanding={d.receivables.outstanding} />
       </div>
 

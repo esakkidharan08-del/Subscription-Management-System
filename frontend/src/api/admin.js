@@ -1,6 +1,6 @@
 import { api } from './client.js';
 
-export const fetchDashboard = () => api('/dashboard');
+export const fetchDashboard = (months) => api('/dashboard', { query: { months } });
 export const listUsers = (query) => api('/users', { query });
 export const createUser = (body) => api('/users', { method: 'POST', body });
 export const listAudit = (query) => api('/audit', { query });

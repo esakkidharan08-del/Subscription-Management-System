@@ -34,6 +34,17 @@ export const migrations = [
   ALTER TABLE invoice_lines ADD COLUMN discount INTEGER NOT NULL DEFAULT 0;
   ALTER TABLE subscriptions ADD COLUMN paused_at TEXT;
   `,
+
+  // 4. A line can carry the variant the customer chose (its price delta is already
+  //    in unit_price). Quotations remember how long they stay valid and until when.
+  //    sent_at records when an invoice was emailed to the customer.
+  `
+  ALTER TABLE subscription_lines ADD COLUMN variant_id INTEGER REFERENCES product_variants(id);
+  ALTER TABLE subscriptions ADD COLUMN quote_validity_days INTEGER NOT NULL DEFAULT 30;
+  ALTER TABLE subscriptions ADD COLUMN quote_valid_until TEXT;
+  ALTER TABLE invoices ADD COLUMN sent_at TEXT;
+  CREATE INDEX idx_payments_method ON payments(method);
+  `,
 ];
 
 export function runMigrations(database) {

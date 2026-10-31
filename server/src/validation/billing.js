@@ -12,6 +12,7 @@ const subscriptionLine = z.object({
     .int()
     .positive('Quantity must be at least 1'),
   unit_price: paise.optional(),
+  variant_id: id.nullish().transform((value) => value ?? null),
 });
 
 const expiryAfterStart = [
@@ -39,6 +40,12 @@ export const subscriptionFromTemplateSchema = z
     payment_terms: z.enum(PAYMENT_TERMS).default('immediate'),
   })
   .refine(...expiryAfterStart);
+
+export const addonSchema = z.object({
+  product_id: id,
+  variant_id: id.nullish().transform((value) => value ?? null),
+  quantity: z.number().int().positive('Quantity must be at least 1').default(1),
+});
 
 export const statusChangeSchema = z.object({
   status: z.enum(SUBSCRIPTION_FLOW),

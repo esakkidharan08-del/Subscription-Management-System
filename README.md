@@ -42,16 +42,17 @@ all with the password `Customer@123`. Every email uses `example.com`, which neve
 
 ## Scripts
 
-| Command                   | What it does                                                  |
-| ------------------------- | ------------------------------------------------------------- |
-| `npm run dev`             | API and website together, both reloading on change            |
-| `npm run seed`            | Accounts, catalog, four demo subscriptions and a 10% discount |
-| `npm run seed:large`      | Adds 500 customers, 5,250 subscriptions and 50,000 invoices   |
-| `npm run bench -w server` | Times the heavy pages against the current database            |
-| `npm test`                | Server tests: billing rules, roles, payments, security        |
-| `npm run lint`            | ESLint                                                        |
-| `npm run format`          | Prettier                                                      |
-| `npm run build`           | Production build of the website into `frontend/dist`          |
+| Command                   | What it does                                                                       |
+| ------------------------- | ---------------------------------------------------------------------------------- |
+| `npm run dev`             | API and website together, both reloading on change                                 |
+| `npm run seed`            | Accounts, catalog, four demo subscriptions and a 10% discount                      |
+| `npm run seed:large`      | Adds 500 customers, 5,250 subscriptions and 50,000 invoices                        |
+| `npm run seed:fresh`      | Replaces only the sample customers with freshly generated ones; safe while running |
+| `npm run bench -w server` | Times the heavy pages against the current database                                 |
+| `npm test`                | Server tests: billing rules, roles, payments, security                             |
+| `npm run lint`            | ESLint                                                                             |
+| `npm run format`          | Prettier                                                                           |
+| `npm run build`           | Production build of the website into `frontend/dist`                               |
 
 Seeding is safe to repeat: it only adds what is missing. To start over, stop the
 server and delete `server/data/app.db*`.
@@ -113,6 +114,18 @@ no database at all, so they are tested directly.
 - **Invoices:** drafts can be edited. A confirmed invoice cannot; it can only be
   paid or cancelled (if it has no payments). It becomes **paid** only when payments
   add up to the full total.
+- **Variants:** a line can carry a product variant; its price delta is added to the unit
+  price (Brand: Odoo, +560) and named on the invoice line.
+- **Quotations:** sending a quotation starts its validity (the template's days, or 30).
+  An expired quotation cannot be confirmed until staff extend it.
+- **Renewal:** staff can renew an active subscription by one billing period; a
+  manual-close plan that stopped at its expiry starts billing again.
+- **Customer self-service:** customers switch add-ons (products of type `addon`) on and
+  off, pause and resume pausable plans, and cancel their own subscription.
+- **Invoices:** print from the invoice page (a print layout without the app around it),
+  or send it to the customer's email (printed in the server console offline).
+- **Payments:** one page of every payment, filtered by date range, method and customer,
+  with the total and the split by method computed over the whole filter.
 - **Overdue:** confirmed, unpaid and past the due date, worked out in the query
   rather than stored.
 - **Roles:** admins do everything; staff manage subscriptions, invoices and payments

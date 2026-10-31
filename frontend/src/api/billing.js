@@ -28,3 +28,15 @@ export const deleteDiscount = (id) => api(`/discounts/${id}`, { method: 'DELETE'
 
 export const allCustomers = () =>
   api('/users', { query: { role: 'customer', pageSize: 100 } }).then((page) => page.data);
+
+export const updateSubscription = (id, body) =>
+  api(`/subscriptions/${id}`, { method: 'PUT', body });
+export const extendQuotation = (id) => api(`/subscriptions/${id}/extend-quote`, { method: 'POST' });
+export const renewSubscription = (id) => api(`/subscriptions/${id}/renew`, { method: 'POST' });
+export const listAddons = () => api('/subscriptions/addons').then((res) => res.data);
+export const addAddon = (id, body) => api(`/subscriptions/${id}/addons`, { method: 'POST', body });
+export const removeAddon = (id, lineId) =>
+  api(`/subscriptions/${id}/addons/${lineId}`, { method: 'DELETE' });
+
+export const sendInvoice = (id) => api(`/invoices/${id}/send`, { method: 'POST' });
+export const listPayments = (query) => api('/payments', { query });

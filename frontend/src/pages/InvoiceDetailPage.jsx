@@ -3,11 +3,12 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import * as billing from '../api/billing.js';
 import { useSession } from '../auth/useSession.js';
+import BrandMark from '../components/BrandMark.jsx';
 import DraftInvoiceEditor from '../components/DraftInvoiceEditor.jsx';
 import FieldError from '../components/FieldError.jsx';
 import FormMessage from '../components/FormMessage.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
-import { formatMoney, labelFor, toPaise, toRupees } from '../lib/format.js';
+import { formatMoney, methodLabel, toPaise, toRupees } from '../lib/format.js';
 
 const STAFF_METHODS = ['upi', 'card', 'bank_transfer', 'cash'];
 const CUSTOMER_METHODS = ['upi', 'card'];
@@ -27,7 +28,7 @@ function CustomerPayButton({ invoice, onPaid }) {
         <select value={method} onChange={(e) => setMethod(e.target.value)}>
           {CUSTOMER_METHODS.map((m) => (
             <option key={m} value={m}>
-              {labelFor(m)}
+              {methodLabel(m)}
             </option>
           ))}
         </select>
@@ -65,7 +66,7 @@ function PaymentForm({ invoice, onPaid }) {
         <select value={form.method} onChange={setField('method')}>
           {STAFF_METHODS.map((method) => (
             <option key={method} value={method}>
-              {labelFor(method)}
+              {methodLabel(method)}
             </option>
           ))}
         </select>
@@ -102,6 +103,7 @@ export default function InvoiceDetailPage() {
   const [editing, setEditing] = useState(false);
   const confirm = useMutation({ mutationFn: () => billing.confirmInvoice(id), onSuccess: refresh });
   const cancel = useMutation({ mutationFn: () => billing.cancelInvoice(id), onSuccess: refresh });
+  const send = useMutation({ mutationFn: () => billing.sendInvoice(id), onSuccess: refresh });
 
   if (invoice.isLoading) return <p className="page-message">Loading…</p>;
   if (invoice.error) return <p className="form-error">{invoice.error.message}</p>;
@@ -109,7 +111,8 @@ export default function InvoiceDetailPage() {
   const inv = invoice.data;
   const canCancel =
     isStaff && ['draft', 'confirmed'].includes(inv.status) && inv.payments.length === 0;
-  const actionError = confirm.error || cancel.error;
+  const actionError = confirm.error || cancel.error || send.error;
+  const canSend = isStaff && ['confirmed', 'paid'].includes(inv.status);
 
   return (
     <div className="page">
@@ -117,7 +120,19 @@ export default function InvoiceDetailPage() {
         <h1>
           {inv.number} <StatusBadge kind="invoice" status={inv.status} overdue={inv.is_overdue} />
         </h1>
-        <div className="form-actions">
+        <div className="form-actions no-print">
+          <button className="button-secondary" onClick={() => window.print()}>
+            Print
+          </button>
+          {canSend && (
+            <button
+              className="button-secondary"
+              onClick={() => send.mutate()}
+              disabled={send.isPending}
+            >
+              {send.isPending ? 'Sending…' : inv.sent_at ? 'Send again' : 'Send to customer'}
+            </button>
+          )}
           {isStaff && inv.status === 'draft' && !editing && (
             <button className="button-secondary" onClick={() => setEditing(true)}>
               Edit draft
@@ -139,12 +154,25 @@ export default function InvoiceDetailPage() {
           )}
         </div>
       </div>
-      {actionError && <p className="form-error">{actionError.message}</p>}
+      {actionError && <p className="form-error no-print">{actionError.message}</p>}
+      {inv.sent_at && (
+        <p className="hint no-print">
+          Emailed to {inv.customer_email} on {inv.sent_at.slice(0, 16).replace('T', ' ')} UTC.
+        </p>
+      )}
+
+      <div className="print-only print-letterhead">
+        <BrandMark scope="Tax invoice" />
+        <p>
+          Bill to {inv.customer_name}, {inv.customer_email}
+        </p>
+      </div>
 
       <section className="card details-grid">
         <div>
           <span className="detail-label">Customer</span>
           {inv.customer_name}
+          <small>{inv.customer_email}</small>
         </div>
         <div>
           <span className="detail-label">Subscription</span>
@@ -232,7 +260,7 @@ export default function InvoiceDetailPage() {
               {inv.payments.map((payment) => (
                 <tr key={payment.id}>
                   <td>{payment.paid_on}</td>
-                  <td>{labelFor(payment.method)}</td>
+                  <td>{methodLabel(payment.method)}</td>
                   <td>{payment.note ?? '—'}</td>
                   <td className="number">{formatMoney(payment.amount)}</td>
                 </tr>

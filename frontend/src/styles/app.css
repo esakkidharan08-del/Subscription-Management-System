@@ -1176,3 +1176,117 @@ a.kpi:hover {
     transition: none !important;
   }
 }
+
+/* ---------- Print: the invoice as a document, without the app around it ---------- */
+
+.print-only {
+  display: none;
+}
+
+.card-head-total {
+  margin-left: 10px;
+  font-size: var(--fs-small);
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.cell-muted {
+  color: var(--muted);
+}
+
+.payment-summary {
+  margin: 4px 0 16px;
+}
+
+@media print {
+  @page {
+    margin: 16mm;
+  }
+
+  html,
+  body {
+    background: #fff;
+  }
+
+  .shell {
+    display: block;
+  }
+
+  .sidebar,
+  .mobile-bar,
+  .no-print,
+  .inline-form,
+  .toolbar,
+  .pagination,
+  .demo-accounts {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  .print-letterhead {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 16px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .print-letterhead .product {
+    padding: 0;
+  }
+
+  .content {
+    max-width: none;
+    padding: 0;
+  }
+
+  .card {
+    border: none;
+    padding: 0 0 16px;
+    break-inside: avoid;
+  }
+
+  tbody tr:hover td {
+    background: none;
+  }
+
+  a {
+    text-decoration: none;
+  }
+}
+
+/* ---------- Confirmations and small controls ---------- */
+
+.button-danger {
+  background: var(--negative);
+  color: #fff;
+}
+
+.button-danger:hover {
+  background: #a51d22;
+}
+
+.confirm-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.qty-input {
+  width: 72px;
+  flex: none;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.card-head .button-secondary {
+  height: 32px;
+}

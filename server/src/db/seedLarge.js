@@ -341,7 +341,7 @@ function writeInvoices(random, pending) {
         method,
         paid,
         date,
-        partial ? 'Part payment, balance pending' : fakePaymentNote(random),
+        partial ? 'Part payment, balance pending' : fakePaymentNote(random, method),
       );
     }
   }

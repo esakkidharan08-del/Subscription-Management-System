@@ -8,12 +8,14 @@ import { listUsableDiscounts } from './discountService.js';
 import { buildInvoice } from './invoiceMath.js';
 import { nextNumber } from './numbering.js';
 import { calculateTaxes } from './tax.js';
+import { sendMail } from '../lib/mailer.js';
+import { formatPaise } from '../lib/money.js';
 
 const PAYMENT_TERM_DAYS = { immediate: 0, net_15: 15, net_30: 30 };
 
 // Overdue is worked out at read time from the due date, never stored, so it can't go stale.
 const INVOICE_COLUMNS = `
-  i.*, u.name AS customer_name, s.number AS subscription_number,
+  i.*, u.name AS customer_name, u.email AS customer_email, s.number AS subscription_number,
   (SELECT COALESCE(SUM(pay.amount), 0) FROM payments pay WHERE pay.invoice_id = i.id) AS amount_paid,
   CASE WHEN i.status = 'confirmed' AND i.due_date < ? THEN 1 ELSE 0 END AS is_overdue`;
 
@@ -26,9 +28,11 @@ function subscriptionLinesForBilling(subscriptionId) {
   return db
     .prepare(
       `SELECT sl.product_id, sl.quantity, sl.unit_price, p.name AS product_name,
+         v.attribute AS variant_attribute, v.value AS variant_value,
          COALESCE(t.rate_bp, 0) AS rate_bp
        FROM subscription_lines sl
        JOIN products p ON p.id = sl.product_id
+       LEFT JOIN product_variants v ON v.id = sl.variant_id
        LEFT JOIN taxes t ON t.id = sl.tax_id
        WHERE sl.subscription_id = ? ORDER BY sl.id`,
     )
@@ -51,7 +55,7 @@ function markDiscountsUsed(discountIds) {
 export function createInvoiceForPeriod(subscription, periodStart, periodEnd) {
   const lines = subscriptionLinesForBilling(subscription.id).map((line) => ({
     ...line,
-    description: `${line.product_name} (${periodStart} to ${periodEnd})`,
+    description: `${line.product_name}${line.variant_value ? ` · ${line.variant_attribute}: ${line.variant_value}` : ''} (${periodStart} to ${periodEnd})`,
   }));
   const invoice = buildInvoice(lines, listUsableDiscounts(periodStart), periodStart);
   const dueDate = addDays(periodStart, PAYMENT_TERM_DAYS[subscription.payment_terms] ?? 0);
@@ -306,4 +310,38 @@ export function cancelInvoice(id, actor) {
     recordAudit(actor, 'invoice_cancelled', 'invoice', id, { total: invoice.total });
     return getInvoice(id);
   });
+}
+
+// Emails the invoice to the customer's registered address through the same
+// mailer as reset links (the console, when running offline). A draft is not
+// sent: the customer only ever receives confirmed figures.
+export async function sendInvoice(id, actor) {
+  const invoice = getInvoice(id);
+  if (!['confirmed', 'paid'].includes(invoice.status)) {
+    throw badRequest(`A ${invoice.status} invoice cannot be sent. Confirm it first.`);
+  }
+
+  const rupees = (paise) => formatPaise(paise);
+  const lines = invoice.lines
+    .map(
+      (line) =>
+        `  ${line.description}  ×${line.quantity}  ${rupees(line.amount + line.tax_amount)}`,
+    )
+    .join('\n');
+  await sendMail({
+    to: invoice.customer_email,
+    subject: `Invoice ${invoice.number} from Brightloop Software`,
+    text:
+      `Hi ${invoice.customer_name},\n\n` +
+      `Here is invoice ${invoice.number} for ${invoice.period_start} to ${invoice.period_end}.\n\n` +
+      `${lines}\n\nTotal ${rupees(invoice.total)}, ` +
+      (invoice.balance > 0
+        ? `${rupees(invoice.balance)} due by ${invoice.due_date}.`
+        : 'already paid in full. Thank you.') +
+      `\n\nView or pay it at ${config.clientUrl}/invoices/${invoice.id}\n`,
+  });
+
+  db.prepare("UPDATE invoices SET sent_at = datetime('now') WHERE id = ?").run(id);
+  recordAudit(actor, 'invoice_sent', 'invoice', id, { to: invoice.customer_email });
+  return getInvoice(id);
 }

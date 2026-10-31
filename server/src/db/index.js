@@ -24,6 +24,10 @@ export function useDatabase(database) {
   db = database;
 }
 
+export function placeholders(values) {
+  return values.map(() => '?').join(', ');
+}
+
 let savepointCounter = 0;
 
 // Savepoints instead of BEGIN so a service that already runs inside a

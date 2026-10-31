@@ -29,6 +29,12 @@ export function errorHandler(err, req, res, next) {
     return res.status(409).json({ error: 'A record with these details already exists' });
   }
 
+  if (err.code === 'ERR_SQLITE_ERROR' && /FOREIGN KEY constraint failed/.test(err.message)) {
+    return res
+      .status(409)
+      .json({ error: 'This refers to a record that does not exist, or the record is still in use' });
+  }
+
   console.error(err);
   res.status(500).json({ error: 'Something went wrong on our side' });
 }

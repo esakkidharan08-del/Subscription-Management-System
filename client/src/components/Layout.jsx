@@ -1,10 +1,20 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useLogout, useSession } from '../auth/useSession.js';
 
+const catalogLinks = [
+  { to: '/products', label: 'Products' },
+  { to: '/plans', label: 'Plans' },
+  { to: '/taxes', label: 'Taxes' },
+  { to: '/templates', label: 'Templates' },
+];
+
 const navByRole = {
-  admin: [{ to: '/', label: 'Home' }],
-  staff: [{ to: '/', label: 'Home' }],
-  customer: [{ to: '/', label: 'Home' }],
+  admin: [{ to: '/', label: 'Home' }, ...catalogLinks],
+  staff: [{ to: '/', label: 'Home' }, ...catalogLinks],
+  customer: [
+    { to: '/', label: 'Home' },
+    { to: '/plans', label: 'Plans' },
+  ],
 };
 
 export default function Layout() {

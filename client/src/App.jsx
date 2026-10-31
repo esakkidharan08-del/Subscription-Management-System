@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useSession } from './auth/useSession.js';
 import Layout from './components/Layout.jsx';
@@ -7,30 +8,71 @@ import SignupPage from './pages/SignupPage.jsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
 
+const ProductsPage = lazy(() => import('./pages/ProductsPage.jsx'));
+const PlansPage = lazy(() => import('./pages/PlansPage.jsx'));
+const TaxesPage = lazy(() => import('./pages/TaxesPage.jsx'));
+const TemplatesPage = lazy(() => import('./pages/TemplatesPage.jsx'));
+
+const loading = <p className="page-message">Loading…</p>;
+
 function RequireLogin({ children }) {
   const { user, isLoading } = useSession();
-  if (isLoading) return <p className="page-message">Loading…</p>;
+  if (isLoading) return loading;
   if (!user) return <Navigate to="/login" replace />;
   return children;
 }
 
+function RequireRole({ roles, children }) {
+  const { user } = useSession();
+  return roles.includes(user.role) ? children : <Navigate to="/" replace />;
+}
+
+const staff = ['admin', 'staff'];
+
 export default function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route
-        element={
-          <RequireLogin>
-            <Layout />
-          </RequireLogin>
-        }
-      >
-        <Route index element={<HomePage />} />
-      </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <Suspense fallback={loading}>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route
+          element={
+            <RequireLogin>
+              <Layout />
+            </RequireLogin>
+          }
+        >
+          <Route index element={<HomePage />} />
+          <Route
+            path="products"
+            element={
+              <RequireRole roles={staff}>
+                <ProductsPage />
+              </RequireRole>
+            }
+          />
+          <Route path="plans" element={<PlansPage />} />
+          <Route
+            path="taxes"
+            element={
+              <RequireRole roles={staff}>
+                <TaxesPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="templates"
+            element={
+              <RequireRole roles={staff}>
+                <TemplatesPage />
+              </RequireRole>
+            }
+          />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 }

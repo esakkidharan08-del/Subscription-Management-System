@@ -6,8 +6,18 @@ export class ApiError extends Error {
   }
 }
 
-export async function api(path, { method = 'GET', body } = {}) {
-  const response = await fetch(`/api${path}`, {
+function withQuery(path, query) {
+  if (!query) return path;
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== null && value !== '') params.set(key, value);
+  }
+  const text = params.toString();
+  return text ? `${path}?${text}` : path;
+}
+
+export async function api(path, { method = 'GET', body, query } = {}) {
+  const response = await fetch(`/api${withQuery(path, query)}`, {
     method,
     credentials: 'same-origin',
     headers: body ? { 'Content-Type': 'application/json' } : undefined,

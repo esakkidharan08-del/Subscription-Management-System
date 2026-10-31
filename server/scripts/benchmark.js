@@ -11,7 +11,7 @@ const endpoints = [
   '/api/dashboard',
   '/api/subscriptions?page=1',
   '/api/subscriptions?page=200&status=active',
-  '/api/subscriptions?search=Bulk%20Customer%2042',
+  '/api/subscriptions?search=Sharma',
   '/api/invoices?page=1',
   '/api/invoices?overdue=true',
   '/api/invoices?page=2000',

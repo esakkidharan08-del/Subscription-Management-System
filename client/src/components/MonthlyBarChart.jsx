@@ -8,7 +8,10 @@ const GAP = 2;
 
 function monthLabel(month) {
   const [year, m] = month.split('-').map(Number);
-  return new Date(Date.UTC(year, m - 1, 1)).toLocaleString('en-IN', { month: 'short', timeZone: 'UTC' });
+  return new Date(Date.UTC(year, m - 1, 1)).toLocaleString('en-IN', {
+    month: 'short',
+    timeZone: 'UTC',
+  });
 }
 
 // One series, so no legend: the card title names it. Hover or focus a bar for its value,
@@ -62,7 +65,13 @@ export default function MonthlyBarChart({ data, valueKey, title }) {
               : 'Hover a month to see its total'}
           </p>
           <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={title} className="chart">
-            <line x1={PAD.left} x2={WIDTH - PAD.right} y1={baseline} y2={baseline} className="chart-axis" />
+            <line
+              x1={PAD.left}
+              x2={WIDTH - PAD.right}
+              y1={baseline}
+              y2={baseline}
+              className="chart-axis"
+            />
             {data.map((d, i) => {
               const h = (d[valueKey] / max) * plotHeight;
               const x = PAD.left + i * slot + (slot - barWidth) / 2;
@@ -84,9 +93,20 @@ export default function MonthlyBarChart({ data, valueKey, title }) {
                   className={active === i ? 'chart-bar is-active' : 'chart-bar'}
                 >
                   {/* Full-height hit area, wider than the bar, so small months are easy to hover. */}
-                  <rect x={PAD.left + i * slot} y={PAD.top} width={slot} height={plotHeight} fill="transparent" />
+                  <rect
+                    x={PAD.left + i * slot}
+                    y={PAD.top}
+                    width={slot}
+                    height={plotHeight}
+                    fill="transparent"
+                  />
                   {path && <path d={path} />}
-                  <text x={x + barWidth / 2} y={HEIGHT - 8} textAnchor="middle" className="chart-label">
+                  <text
+                    x={x + barWidth / 2}
+                    y={HEIGHT - 8}
+                    textAnchor="middle"
+                    className="chart-label"
+                  >
                     {monthLabel(d.month)}
                   </text>
                 </g>

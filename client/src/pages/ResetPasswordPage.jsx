@@ -2,7 +2,9 @@ import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { resetPassword } from '../api/auth.js';
+import { passwordField } from 'shared/validation/auth.js';
 import FieldError from '../components/FieldError.jsx';
+import PasswordChecklist from '../components/PasswordChecklist.jsx';
 
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -35,8 +37,12 @@ export default function ResetPasswordPage() {
                 required
               />
             </label>
+            <PasswordChecklist value={password} />
             <FieldError error={reset.error} field="password" />
-            <button type="submit" disabled={reset.isPending || !token}>
+            <button
+              type="submit"
+              disabled={reset.isPending || !token || !passwordField.safeParse(password).success}
+            >
               Update password
             </button>
           </>

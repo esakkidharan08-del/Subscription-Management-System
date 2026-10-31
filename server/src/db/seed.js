@@ -7,8 +7,18 @@ import { changeStatus, createSubscription } from '../services/subscriptionServic
 const accounts = [
   { name: 'Admin User', email: 'admin@example.com', password: 'Admin@12345', role: 'admin' },
   { name: 'Staff User', email: 'staff@example.com', password: 'Staff@12345', role: 'staff' },
-  { name: 'Customer One', email: 'customer@example.com', password: 'Customer@123', role: 'customer' },
-  { name: 'Customer Two', email: 'customer2@example.com', password: 'Customer@123', role: 'customer' },
+  {
+    name: 'Customer One',
+    email: 'customer@example.com',
+    password: 'Customer@123',
+    role: 'customer',
+  },
+  {
+    name: 'Customer Two',
+    email: 'customer2@example.com',
+    password: 'Customer@123',
+    role: 'customer',
+  },
 ];
 
 function seedAccounts() {
@@ -23,7 +33,9 @@ function seedAccounts() {
 function insertRow(table, row) {
   const columns = Object.keys(row);
   const result = db
-    .prepare(`INSERT INTO ${table} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`)
+    .prepare(
+      `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`,
+    )
     .run(...Object.values(row));
   return Number(result.lastInsertRowid);
 }
@@ -43,8 +55,18 @@ function seedCatalog() {
     cost_price: 40000,
     notes: 'Per user licence',
   });
-  insertRow('product_variants', { product_id: erp, attribute: 'brand', value: 'Odoo', price_delta: 56000 });
-  insertRow('product_variants', { product_id: erp, attribute: 'edition', value: 'Enterprise', price_delta: 30000 });
+  insertRow('product_variants', {
+    product_id: erp,
+    attribute: 'brand',
+    value: 'Odoo',
+    price_delta: 56000,
+  });
+  insertRow('product_variants', {
+    product_id: erp,
+    attribute: 'edition',
+    value: 'Enterprise',
+    price_delta: 30000,
+  });
 
   const hosting = insertRow('products', {
     name: 'Cloud Hosting',
@@ -113,7 +135,8 @@ function seedSubscriptions() {
   const threeMonthsAgo = addMonths(today(), -3);
 
   const activate = (subscription) => {
-    for (const status of ['quotation', 'confirmed', 'active']) changeStatus(subscription.id, status);
+    for (const status of ['quotation', 'confirmed', 'active'])
+      changeStatus(subscription.id, status);
   };
 
   activate(
@@ -161,9 +184,24 @@ function seedSubscriptions() {
   });
 }
 
+// Added separately from the catalog so databases seeded before pausing existed get it too.
+function seedPausablePlan() {
+  const exists = db.prepare("SELECT 1 FROM plans WHERE end_behavior = 'pausable'").get();
+  const product = db.prepare("SELECT id FROM products WHERE name = 'Cloud Hosting'").get();
+  if (exists || !product) return;
+  insertRow('plans', {
+    product_id: product.id,
+    name: 'Hosting Flexible',
+    price: 95000,
+    billing_period: 'monthly',
+    end_behavior: 'pausable',
+  });
+}
+
 transaction(() => {
   seedAccounts();
   seedCatalog();
+  seedPausablePlan();
   seedSubscriptions();
   if (process.argv.includes('--large')) seedLargeDataset();
 });

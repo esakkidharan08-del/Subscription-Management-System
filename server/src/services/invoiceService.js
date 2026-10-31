@@ -1,3 +1,4 @@
+import { config } from '../config.js';
 import { db, transaction } from '../db/index.js';
 import { recordAudit } from '../lib/audit.js';
 import { addDays, today } from '../lib/dates.js';
@@ -6,6 +7,7 @@ import { pagedResult } from '../lib/pagination.js';
 import { listUsableDiscounts } from './discountService.js';
 import { buildInvoice } from './invoiceMath.js';
 import { nextNumber } from './numbering.js';
+import { calculateTaxes } from './tax.js';
 
 const PAYMENT_TERM_DAYS = { immediate: 0, net_15: 15, net_30: 30 };
 
@@ -53,8 +55,10 @@ export function createInvoiceForPeriod(subscription, periodStart, periodEnd) {
   }));
   const invoice = buildInvoice(lines, listUsableDiscounts(periodStart), periodStart);
   const dueDate = addDays(periodStart, PAYMENT_TERM_DAYS[subscription.payment_terms] ?? 0);
-  // A fully discounted invoice has nothing to collect.
-  const status = invoice.total === 0 ? 'paid' : 'confirmed';
+  // A fully discounted invoice has nothing to collect. Otherwise it is confirmed
+  // straight away, or left as a draft for staff to review when auto-confirm is off.
+  let status = config.autoConfirmInvoices ? 'confirmed' : 'draft';
+  if (invoice.total === 0) status = 'paid';
 
   const result = db
     .prepare(
@@ -78,20 +82,23 @@ export function createInvoiceForPeriod(subscription, periodStart, periodEnd) {
   const invoiceId = Number(result.lastInsertRowid);
 
   const insertLine = db.prepare(
-    `INSERT INTO invoice_lines (invoice_id, product_id, description, quantity, unit_price, tax_amount, amount)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO invoice_lines (invoice_id, product_id, description, quantity, unit_price,
+       tax_rate_bp, discount, tax_amount, amount)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
-  for (const line of invoice.lines) {
+  invoice.lines.forEach((line, i) => {
     insertLine.run(
       invoiceId,
       line.product_id,
       line.description,
       line.quantity,
       line.unit_price,
+      lines[i].rate_bp,
+      line.discount,
       line.tax_amount,
       line.amount,
     );
-  }
+  });
 
   markDiscountsUsed(invoice.appliedDiscountIds);
   return invoiceId;
@@ -102,7 +109,9 @@ function assertCanView(invoice, viewer) {
 }
 
 export function getInvoice(id, viewer) {
-  const invoice = db.prepare(`SELECT ${INVOICE_COLUMNS} ${INVOICE_JOINS} WHERE i.id = ?`).get(today(), id);
+  const invoice = db
+    .prepare(`SELECT ${INVOICE_COLUMNS} ${INVOICE_JOINS} WHERE i.id = ?`)
+    .get(today(), id);
   if (!invoice) throw notFound('Invoice');
   assertCanView(invoice, viewer);
 
@@ -188,7 +197,9 @@ export function* exportInvoicesCsv(criteria) {
   yield `${[...CSV_COLUMNS, 'overdue'].join(',')}\n`;
 
   const rows = db
-    .prepare(`SELECT ${INVOICE_COLUMNS} ${INVOICE_JOINS} ${where} ORDER BY i.period_start DESC, i.id DESC`)
+    .prepare(
+      `SELECT ${INVOICE_COLUMNS} ${INVOICE_JOINS} ${where} ORDER BY i.period_start DESC, i.id DESC`,
+    )
     .iterate(asOf, ...params);
   for (const row of rows) {
     const fields = CSV_COLUMNS.map((column) =>
@@ -199,10 +210,83 @@ export function* exportInvoicesCsv(criteria) {
   }
 }
 
+// Only drafts can change. Once confirmed, the invoice is what the customer was
+// sent, so corrections go through cancelling and re-billing instead.
+export function updateDraftInvoice(id, { due_date, lines }, actor) {
+  return transaction(() => {
+    const invoice = getInvoice(id);
+    if (invoice.status !== 'draft') {
+      throw badRequest(`A ${invoice.status} invoice cannot be edited. Only drafts can change.`);
+    }
+
+    const changes = new Map(lines.map((line) => [line.id, line]));
+    for (const lineId of changes.keys()) {
+      if (!invoice.lines.some((line) => line.id === lineId)) {
+        throw badRequest(`Line ${lineId} is not on this invoice`);
+      }
+    }
+
+    const edited = invoice.lines.map((line) => {
+      const change = changes.get(line.id) ?? {};
+      const quantity = change.quantity ?? line.quantity;
+      const unitPrice = change.unit_price ?? line.unit_price;
+      const gross = quantity * unitPrice;
+      // The discount stays as billed, but never more than the new line amount.
+      const discount = Math.min(line.discount, gross);
+      return {
+        ...line,
+        description: change.description ?? line.description,
+        quantity,
+        unit_price: unitPrice,
+        gross,
+        discount,
+        amount: gross - discount,
+      };
+    });
+
+    const { lineTaxes, taxTotal } = calculateTaxes(
+      edited.map((line) => ({ amount: line.amount, rate_bp: line.tax_rate_bp })),
+    );
+    const updateLine = db.prepare(
+      `UPDATE invoice_lines SET description = ?, quantity = ?, unit_price = ?, discount = ?,
+         tax_amount = ?, amount = ? WHERE id = ?`,
+    );
+    edited.forEach((line, i) => {
+      updateLine.run(
+        line.description,
+        line.quantity,
+        line.unit_price,
+        line.discount,
+        lineTaxes[i],
+        line.amount,
+        line.id,
+      );
+    });
+
+    const subtotal = edited.reduce((sum, line) => sum + line.gross, 0);
+    const discountTotal = edited.reduce((sum, line) => sum + line.discount, 0);
+    db.prepare(
+      `UPDATE invoices SET subtotal = ?, discount_total = ?, tax_total = ?, total = ?, due_date = ?
+       WHERE id = ?`,
+    ).run(
+      subtotal,
+      discountTotal,
+      taxTotal,
+      subtotal - discountTotal + taxTotal,
+      due_date ?? invoice.due_date,
+      id,
+    );
+
+    recordAudit(actor, 'invoice_edited', 'invoice', id, { lines: lines.length });
+    return getInvoice(id);
+  });
+}
+
 export function confirmInvoice(id, actor) {
   return transaction(() => {
     const invoice = getInvoice(id);
-    if (invoice.status !== 'draft') throw badRequest(`A ${invoice.status} invoice cannot be confirmed`);
+    if (invoice.status !== 'draft')
+      throw badRequest(`A ${invoice.status} invoice cannot be confirmed`);
     db.prepare("UPDATE invoices SET status = 'confirmed' WHERE id = ?").run(id);
     recordAudit(actor, 'invoice_confirmed', 'invoice', id);
     return getInvoice(id);

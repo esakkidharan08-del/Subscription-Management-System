@@ -25,7 +25,9 @@ function CustomerHome({ user }) {
           <Link to="/invoices" className="card stat-tile stat-link">
             <span className="stat-label">Balance due</span>
             <span className="stat-value">{formatMoney(s.balance_due)}</span>
-            {s.overdue_count > 0 && <span className="stat-note danger">{s.overdue_count} overdue</span>}
+            {s.overdue_count > 0 && (
+              <span className="stat-note danger">{s.overdue_count} overdue</span>
+            )}
           </Link>
         </div>
       )}

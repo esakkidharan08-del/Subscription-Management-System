@@ -39,7 +39,8 @@ function BillingRunPanel() {
       {run.data && (
         <p className="form-success">
           Billed up to {run.data.asOf}: {run.data.invoicesCreated} invoices created,{' '}
-          {run.data.periodsSkipped} already billed, {run.data.subscriptionsClosed} subscriptions closed
+          {run.data.periodsSkipped} already billed, {run.data.subscriptionsClosed} subscriptions
+          closed
           {run.data.failures.length > 0 && `, ${run.data.failures.length} failed`}.
         </p>
       )}

@@ -13,13 +13,40 @@ export function freshDatabase() {
 
 // A small catalog: one 18% taxed product on a monthly plan, and two customers.
 export function seedBasics({ endBehavior = 'renewable', billingPeriod = 'monthly' } = {}) {
-  const admin = createUser({ name: 'Admin', email: 'admin@test.dev', password: PASSWORD, role: 'admin' });
-  const staff = createUser({ name: 'Staff', email: 'staff@test.dev', password: PASSWORD, role: 'staff' });
-  const customer = createUser({ name: 'Asha', email: 'asha@test.dev', password: PASSWORD, role: 'customer' });
-  const otherCustomer = createUser({ name: 'Ravi', email: 'ravi@test.dev', password: PASSWORD, role: 'customer' });
+  const admin = createUser({
+    name: 'Admin',
+    email: 'admin@test.dev',
+    password: PASSWORD,
+    role: 'admin',
+  });
+  const staff = createUser({
+    name: 'Staff',
+    email: 'staff@test.dev',
+    password: PASSWORD,
+    role: 'staff',
+  });
+  const customer = createUser({
+    name: 'Asha',
+    email: 'asha@test.dev',
+    password: PASSWORD,
+    role: 'customer',
+  });
+  const otherCustomer = createUser({
+    name: 'Ravi',
+    email: 'ravi@test.dev',
+    password: PASSWORD,
+    role: 'customer',
+  });
 
   const tax = createTax({ name: 'GST 18%', rate_bp: 1800 });
-  const product = createProduct({ name: 'ERP', type: 'software', sales_price: 100000, cost_price: 0, notes: null, variants: [] });
+  const product = createProduct({
+    name: 'ERP',
+    type: 'software',
+    sales_price: 100000,
+    cost_price: 0,
+    notes: null,
+    variants: [],
+  });
   createTaxRule({ tax_id: tax.id, product_id: null, category: 'software', priority: 0 });
 
   const plan = createPlan({
@@ -67,7 +94,9 @@ export function insertDiscount(fields) {
   };
   const columns = Object.keys(row);
   const result = db
-    .prepare(`INSERT INTO discounts (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`)
+    .prepare(
+      `INSERT INTO discounts (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`,
+    )
     .run(...Object.values(row));
   return Number(result.lastInsertRowid);
 }

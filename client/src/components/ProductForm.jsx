@@ -28,7 +28,10 @@ export default function ProductForm({ product, onSave, onCancel, saving, error }
   }
 
   function addVariant() {
-    setForm({ ...form, variants: [...form.variants, { attribute: '', value: '', price_delta: '' }] });
+    setForm({
+      ...form,
+      variants: [...form.variants, { attribute: '', value: '', price_delta: '' }],
+    });
   }
 
   function removeVariant(index) {
@@ -73,12 +76,24 @@ export default function ProductForm({ product, onSave, onCancel, saving, error }
       </label>
       <label>
         Sales price (₹)
-        <input type="number" step="0.01" min="0" value={form.sales_price} onChange={setField('sales_price')} />
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          value={form.sales_price}
+          onChange={setField('sales_price')}
+        />
         <FieldError error={error} field="sales_price" />
       </label>
       <label>
         Cost price (₹)
-        <input type="number" step="0.01" min="0" value={form.cost_price} onChange={setField('cost_price')} />
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          value={form.cost_price}
+          onChange={setField('cost_price')}
+        />
         <FieldError error={error} field="cost_price" />
       </label>
       <label className="span-2">

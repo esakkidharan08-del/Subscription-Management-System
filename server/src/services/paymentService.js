@@ -9,7 +9,8 @@ export function recordPayment(invoiceId, { method, amount, paid_on, note }, acto
     const invoice = db.prepare('SELECT * FROM invoices WHERE id = ?').get(invoiceId);
     if (!invoice) throw notFound('Invoice');
     if (invoice.status === 'paid') throw badRequest('This invoice is already paid');
-    if (invoice.status !== 'confirmed') throw badRequest('Only confirmed invoices can take payments');
+    if (invoice.status !== 'confirmed')
+      throw badRequest('Only confirmed invoices can take payments');
 
     const { paid } = db
       .prepare('SELECT COALESCE(SUM(amount), 0) AS paid FROM payments WHERE invoice_id = ?')
@@ -19,13 +20,9 @@ export function recordPayment(invoiceId, { method, amount, paid_on, note }, acto
       throw badRequest(`Payment is more than the balance due of ${formatPaise(balance)}`);
     }
 
-    db.prepare('INSERT INTO payments (invoice_id, method, amount, paid_on, note) VALUES (?, ?, ?, ?, ?)').run(
-      invoiceId,
-      method,
-      amount,
-      paid_on,
-      note,
-    );
+    db.prepare(
+      'INSERT INTO payments (invoice_id, method, amount, paid_on, note) VALUES (?, ?, ?, ?, ?)',
+    ).run(invoiceId, method, amount, paid_on, note);
     recordAudit(actor, 'payment_recorded', 'invoice', invoiceId, { method, amount });
 
     // Paid only when the payments add up to the full total, never on a partial payment.

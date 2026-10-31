@@ -1,6 +1,8 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { discountSchema } from 'shared/validation/discount.js';
 import * as billing from '../api/billing.js';
+import { checkLocally } from '../lib/validate.js';
 import * as catalog from '../api/catalog.js';
 import { useSession } from '../auth/useSession.js';
 import FieldError from '../components/FieldError.jsx';
@@ -27,14 +29,16 @@ function initialState(discount) {
   };
 }
 
-function DiscountForm({ discount, products, onSave, onCancel, saving, error }) {
+function DiscountForm({ discount, products, onSave, onCancel, saving, error: serverError }) {
   const [form, setForm] = useState(() => initialState(discount));
+  const [localError, setLocalError] = useState(null);
   const setField = (field) => (event) => setForm({ ...form, [field]: event.target.value });
+  const error = localError ?? serverError;
 
   function handleSubmit(event) {
     event.preventDefault();
     const value = form.type === 'fixed' ? toPaise(form.value) : toNumberOrNull(form.value);
-    onSave({
+    const body = {
       name: form.name,
       type: form.type,
       value,
@@ -46,7 +50,11 @@ function DiscountForm({ discount, products, onSave, onCancel, saving, error }) {
       ends_at: form.ends_at || null,
       usage_limit: toNumberOrNull(form.usage_limit),
       active: form.active,
-    });
+    };
+    // Same rules the API applies: percent above 100, end before start, missing product.
+    const problems = checkLocally(discountSchema, body);
+    setLocalError(problems);
+    if (!problems) onSave(body);
   }
 
   return (
@@ -88,17 +96,34 @@ function DiscountForm({ discount, products, onSave, onCancel, saving, error }) {
       </label>
       <label>
         {form.type === 'percent' ? 'Percent' : 'Amount (₹)'}
-        <input type="number" step={form.type === 'percent' ? '1' : '0.01'} min="0" value={form.value} onChange={setField('value')} />
+        <input
+          type="number"
+          step={form.type === 'percent' ? '1' : '0.01'}
+          min="0"
+          value={form.value}
+          onChange={setField('value')}
+        />
         <FieldError error={error} field="value" />
       </label>
       <label>
         Minimum invoice amount (₹)
-        <input type="number" step="0.01" min="0" value={form.min_amount} onChange={setField('min_amount')} />
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          value={form.min_amount}
+          onChange={setField('min_amount')}
+        />
         <FieldError error={error} field="min_amount" />
       </label>
       <label>
         Minimum quantity
-        <input type="number" min="0" value={form.min_quantity} onChange={setField('min_quantity')} />
+        <input
+          type="number"
+          min="0"
+          value={form.min_quantity}
+          onChange={setField('min_quantity')}
+        />
       </label>
       <label>
         Starts
@@ -159,7 +184,11 @@ export default function DiscountsPage() {
     queryFn: () => billing.listDiscounts({ page }),
     placeholderData: keepPreviousData,
   });
-  const products = useQuery({ queryKey: ['products', 'all'], queryFn: catalog.allProducts, enabled: canEdit });
+  const products = useQuery({
+    queryKey: ['products', 'all'],
+    queryFn: catalog.allProducts,
+    enabled: canEdit,
+  });
 
   const save = useSaveMutation({
     create: billing.createDiscount,
@@ -233,7 +262,10 @@ export default function DiscountsPage() {
                       <button className="button-link" onClick={() => openForm(discount)}>
                         Edit
                       </button>
-                      <button className="button-link danger" onClick={() => remove.mutate(discount.id)}>
+                      <button
+                        className="button-link danger"
+                        onClick={() => remove.mutate(discount.id)}
+                      >
                         {discount.times_used > 0 ? 'Turn off' : 'Delete'}
                       </button>
                     </td>

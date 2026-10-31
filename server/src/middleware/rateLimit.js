@@ -27,7 +27,9 @@ export function rateLimit({ windowMinutes, max, keyFor = (req) => req.ip }) {
     if (entry.count > max) {
       const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
       res.set('Retry-After', String(retryAfter));
-      return next(new AppError(429, `Too many attempts, try again in ${Math.ceil(retryAfter / 60)} minutes`));
+      return next(
+        new AppError(429, `Too many attempts, try again in ${Math.ceil(retryAfter / 60)} minutes`),
+      );
     }
     next();
   };

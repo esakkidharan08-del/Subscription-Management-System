@@ -9,7 +9,9 @@ const DISCOUNT_JOIN = 'FROM discounts d LEFT JOIN products p ON p.id = d.product
 export function listDiscounts(paging) {
   const { total } = db.prepare('SELECT COUNT(*) AS total FROM discounts').get();
   const rows = db
-    .prepare(`SELECT ${DISCOUNT_COLUMNS} ${DISCOUNT_JOIN} ORDER BY d.active DESC, d.id DESC LIMIT ? OFFSET ?`)
+    .prepare(
+      `SELECT ${DISCOUNT_COLUMNS} ${DISCOUNT_JOIN} ORDER BY d.active DESC, d.id DESC LIMIT ? OFFSET ?`,
+    )
     .all(paging.limit, paging.offset);
   return pagedResult(rows, total, paging);
 }

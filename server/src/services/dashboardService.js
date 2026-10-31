@@ -27,7 +27,9 @@ function recurringRevenue() {
 }
 
 function subscriptionsByStatus() {
-  const rows = db.prepare('SELECT status, COUNT(*) AS count FROM subscriptions GROUP BY status').all();
+  const rows = db
+    .prepare('SELECT status, COUNT(*) AS count FROM subscriptions GROUP BY status')
+    .all();
   return Object.fromEntries(rows.map((row) => [row.status, row.count]));
 }
 

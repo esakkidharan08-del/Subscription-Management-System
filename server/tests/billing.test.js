@@ -4,7 +4,13 @@ import { beforeEach, describe, test } from 'node:test';
 import { db } from '../src/db/index.js';
 import { runBilling } from '../src/services/billingService.js';
 import { getSubscription } from '../src/services/subscriptionService.js';
-import { activeSubscription, countInvoices, freshDatabase, insertDiscount, seedBasics } from './helpers.js';
+import {
+  activeSubscription,
+  countInvoices,
+  freshDatabase,
+  insertDiscount,
+  seedBasics,
+} from './helpers.js';
 
 describe('billing run', () => {
   beforeEach(() => freshDatabase());
@@ -27,7 +33,10 @@ describe('billing run', () => {
     runBilling('2026-01-15');
 
     // Simulate a run that saved the invoice but died before moving the date on.
-    db.prepare('UPDATE subscriptions SET next_billing_date = ? WHERE id = ?').run('2026-01-01', subscription.id);
+    db.prepare('UPDATE subscriptions SET next_billing_date = ? WHERE id = ?').run(
+      '2026-01-01',
+      subscription.id,
+    );
     const retry = runBilling('2026-01-15');
 
     assert.equal(retry.invoicesCreated, 0);
@@ -82,7 +91,9 @@ describe('billing run', () => {
     const subscription = activeSubscription(fixtures);
     runBilling('2026-01-01');
 
-    const invoice = db.prepare('SELECT * FROM invoices WHERE subscription_id = ?').get(subscription.id);
+    const invoice = db
+      .prepare('SELECT * FROM invoices WHERE subscription_id = ?')
+      .get(subscription.id);
     assert.equal(invoice.subtotal, 100000);
     assert.equal(invoice.tax_total, 18000);
     assert.equal(invoice.total, 118000);
@@ -95,7 +106,9 @@ describe('billing run', () => {
     const subscription = activeSubscription(fixtures, { payment_terms: 'net_15' });
     runBilling('2026-01-01');
 
-    const invoice = db.prepare('SELECT due_date FROM invoices WHERE subscription_id = ?').get(subscription.id);
+    const invoice = db
+      .prepare('SELECT due_date FROM invoices WHERE subscription_id = ?')
+      .get(subscription.id);
     assert.equal(invoice.due_date, '2026-01-16');
   });
 
@@ -154,11 +167,16 @@ describe('discounts during billing', () => {
 
     runBilling('2026-01-01');
 
-    const invoice = db.prepare('SELECT * FROM invoices WHERE subscription_id = ?').get(subscription.id);
+    const invoice = db
+      .prepare('SELECT * FROM invoices WHERE subscription_id = ?')
+      .get(subscription.id);
     assert.equal(invoice.discount_total, 10000);
     assert.equal(invoice.tax_total, 16200);
     assert.equal(invoice.total, 106200);
-    assert.equal(db.prepare('SELECT times_used FROM discounts WHERE id = ?').get(discountId).times_used, 1);
+    assert.equal(
+      db.prepare('SELECT times_used FROM discounts WHERE id = ?').get(discountId).times_used,
+      1,
+    );
   });
 
   test('stops applying once the usage limit is reached', () => {
@@ -169,7 +187,9 @@ describe('discounts during billing', () => {
     runBilling('2026-03-15');
 
     const discounts = db
-      .prepare('SELECT discount_total FROM invoices WHERE subscription_id = ? ORDER BY period_start')
+      .prepare(
+        'SELECT discount_total FROM invoices WHERE subscription_id = ? ORDER BY period_start',
+      )
       .all(subscription.id)
       .map((row) => row.discount_total);
     assert.deepEqual(discounts, [5000, 5000, 0]);
@@ -183,7 +203,9 @@ describe('discounts during billing', () => {
     runBilling('2026-02-15');
 
     const discounts = db
-      .prepare('SELECT discount_total FROM invoices WHERE subscription_id = ? ORDER BY period_start')
+      .prepare(
+        'SELECT discount_total FROM invoices WHERE subscription_id = ? ORDER BY period_start',
+      )
       .all(subscription.id)
       .map((row) => row.discount_total);
     assert.deepEqual(discounts, [50000, 0]);
@@ -196,7 +218,9 @@ describe('discounts during billing', () => {
 
     runBilling('2026-01-01');
 
-    const invoice = db.prepare('SELECT * FROM invoices WHERE subscription_id = ?').get(subscription.id);
+    const invoice = db
+      .prepare('SELECT * FROM invoices WHERE subscription_id = ?')
+      .get(subscription.id);
     assert.equal(invoice.total, 0);
     assert.equal(invoice.status, 'paid');
   });

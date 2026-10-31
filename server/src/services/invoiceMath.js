@@ -33,7 +33,10 @@ function applyProductDiscounts(lines, discounts, applied) {
     });
     if (!best) continue;
 
-    allocate(best.amount, group.map((line) => line.gross)).forEach((share, i) => {
+    allocate(
+      best.amount,
+      group.map((line) => line.gross),
+    ).forEach((share, i) => {
       group[i].discount += share;
     });
     applied.push(best.discount.id);

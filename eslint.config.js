@@ -7,7 +7,7 @@ export default [
   { ignores: ['**/node_modules/**', '**/dist/**', 'server/data/**'] },
   js.configs.recommended,
   {
-    files: ['server/**/*.js', '*.js'],
+    files: ['server/**/*.js', 'shared/**/*.js', '*.js'],
     languageOptions: { globals: globals.node },
   },
   {

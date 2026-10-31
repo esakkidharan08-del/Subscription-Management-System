@@ -93,7 +93,10 @@ export default function ProductsPage() {
                       <button className="button-link" onClick={() => openForm(product)}>
                         Edit
                       </button>
-                      <button className="button-link danger" onClick={() => remove.mutate(product.id)}>
+                      <button
+                        className="button-link danger"
+                        onClick={() => remove.mutate(product.id)}
+                      >
                         Delete
                       </button>
                     </td>

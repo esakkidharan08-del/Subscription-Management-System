@@ -18,7 +18,8 @@ export const productSchema = z.object({
     .array(variantSchema)
     .default([])
     .refine(
-      (variants) => new Set(variants.map((v) => `${v.attribute}=${v.value}`)).size === variants.length,
+      (variants) =>
+        new Set(variants.map((v) => `${v.attribute}=${v.value}`)).size === variants.length,
       'Each attribute and value pair can only appear once',
     ),
 });
@@ -32,12 +33,18 @@ export const planSchema = z
     min_quantity: z.number().int().min(1, 'Minimum quantity is at least 1').default(1),
     available_from: optionalDate,
     available_to: optionalDate,
-    end_behavior: z.enum(['auto_close', 'manual_close', 'pausable', 'renewable']).default('renewable'),
+    end_behavior: z
+      .enum(['auto_close', 'manual_close', 'pausable', 'renewable'])
+      .default('renewable'),
   })
-  .refine((plan) => !plan.available_from || !plan.available_to || plan.available_to >= plan.available_from, {
-    message: 'End date must be on or after the start date',
-    path: ['available_to'],
-  });
+  .refine(
+    (plan) =>
+      !plan.available_from || !plan.available_to || plan.available_to >= plan.available_from,
+    {
+      message: 'End date must be on or after the start date',
+      path: ['available_to'],
+    },
+  );
 
 export const taxSchema = z.object({
   name: requiredText('Name'),

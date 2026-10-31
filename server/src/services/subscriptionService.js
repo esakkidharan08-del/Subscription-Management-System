@@ -1,5 +1,6 @@
 import { db, transaction } from '../db/index.js';
 import { recordAudit } from '../lib/audit.js';
+import { nextBillingDate, today } from '../lib/dates.js';
 import { badRequest, notFound } from '../lib/errors.js';
 import { pagedResult } from '../lib/pagination.js';
 import { assertTransition } from './lifecycle.js';
@@ -27,7 +28,8 @@ const SUBSCRIPTION_JOINS = `
 function assertCustomerAccount(customerId) {
   const user = db.prepare('SELECT role FROM users WHERE id = ?').get(customerId);
   if (!user) throw badRequest('Customer not found');
-  if (user.role !== 'customer') throw badRequest('Subscriptions can only belong to customer accounts');
+  if (user.role !== 'customer')
+    throw badRequest('Subscriptions can only belong to customer accounts');
 }
 
 function priceLines(plan, requestedLines) {
@@ -70,7 +72,14 @@ function replaceLines(subscriptionId, lines) {
      VALUES (?, ?, ?, ?, ?, ?)`,
   );
   for (const line of lines) {
-    insert.run(subscriptionId, line.product_id, line.quantity, line.unit_price, line.tax_id, line.amount);
+    insert.run(
+      subscriptionId,
+      line.product_id,
+      line.quantity,
+      line.unit_price,
+      line.tax_id,
+      line.amount,
+    );
   }
 }
 
@@ -119,7 +128,9 @@ export function listSubscriptions({ status, search, customerId }, paging) {
 
   const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
   const { total } = db
-    .prepare(`SELECT COUNT(*) AS total FROM subscriptions s JOIN users u ON u.id = s.customer_id ${where}`)
+    .prepare(
+      `SELECT COUNT(*) AS total FROM subscriptions s JOIN users u ON u.id = s.customer_id ${where}`,
+    )
     .get(...params);
   const rows = db
     .prepare(
@@ -202,7 +213,49 @@ export function changeStatus(id, nextStatus, actor) {
       nextBillingDate,
       id,
     );
-    recordAudit(actor, 'status_changed', 'subscription', id, { from: subscription.status, to: nextStatus });
+    recordAudit(actor, 'status_changed', 'subscription', id, {
+      from: subscription.status,
+      to: nextStatus,
+    });
+    return getSubscription(id);
+  });
+}
+
+// Only plans marked "pausable" can be put on hold. Billing skips paused
+// subscriptions, and resuming picks up at the next billing date from today,
+// so the months spent paused are never billed.
+export function pauseSubscription(id, actor) {
+  return transaction(() => {
+    const subscription = getSubscription(id);
+    if (subscription.status !== 'active')
+      throw badRequest('Only active subscriptions can be paused');
+    if (subscription.end_behavior !== 'pausable') {
+      throw badRequest('This plan does not allow pausing');
+    }
+    if (subscription.paused_at) throw badRequest('This subscription is already paused');
+
+    db.prepare('UPDATE subscriptions SET paused_at = ? WHERE id = ?').run(today(), id);
+    recordAudit(actor, 'subscription_paused', 'subscription', id);
+    return getSubscription(id);
+  });
+}
+
+export function resumeSubscription(id, actor) {
+  return transaction(() => {
+    const subscription = getSubscription(id);
+    if (!subscription.paused_at) throw badRequest('This subscription is not paused');
+
+    const resumeOn = today();
+    let nextDate = subscription.next_billing_date ?? subscription.start_date;
+    while (nextDate < resumeOn) {
+      nextDate = nextBillingDate(subscription.start_date, nextDate, subscription.billing_period);
+    }
+
+    db.prepare('UPDATE subscriptions SET paused_at = NULL, next_billing_date = ? WHERE id = ?').run(
+      nextDate,
+      id,
+    );
+    recordAudit(actor, 'subscription_resumed', 'subscription', id, { next_billing_date: nextDate });
     return getSubscription(id);
   });
 }

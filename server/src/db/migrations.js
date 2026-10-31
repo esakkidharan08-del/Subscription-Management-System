@@ -26,6 +26,14 @@ export const migrations = [
   CREATE INDEX idx_invoices_period_start ON invoices(period_start);
   CREATE INDEX idx_password_resets_user ON password_resets(user_id);
   `,
+
+  // 3. Lines keep their tax rate and discount so a draft invoice can be re-totalled
+  //    after an edit. paused_at marks a pausable subscription that is on hold.
+  `
+  ALTER TABLE invoice_lines ADD COLUMN tax_rate_bp INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE invoice_lines ADD COLUMN discount INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE subscriptions ADD COLUMN paused_at TEXT;
+  `,
 ];
 
 export function runMigrations(database) {

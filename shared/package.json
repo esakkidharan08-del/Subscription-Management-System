@@ -1,0 +1,9 @@
+{
+  "name": "shared",
+  "private": true,
+  "type": "module",
+  "description": "Validation rules used by both the API and the client forms",
+  "dependencies": {
+    "zod": "^3.24.1"
+  }
+}

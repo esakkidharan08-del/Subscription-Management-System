@@ -8,7 +8,8 @@ export function pickTaxRule(rules, product) {
       rule.product_id === product.id || (rule.product_id == null && rule.category === product.type),
   );
   matching.sort(
-    (a, b) => b.priority - a.priority || Number(b.product_id != null) - Number(a.product_id != null),
+    (a, b) =>
+      b.priority - a.priority || Number(b.product_id != null) - Number(a.product_id != null),
   );
   return matching[0] ?? null;
 }

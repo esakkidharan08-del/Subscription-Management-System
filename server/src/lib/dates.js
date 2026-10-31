@@ -23,7 +23,9 @@ export function addDays(isoDate, days) {
 export function addMonths(isoDate, months) {
   const date = parse(isoDate);
   const targetMonth = date.getUTCMonth() + months;
-  const lastDayOfTarget = new Date(Date.UTC(date.getUTCFullYear(), targetMonth + 1, 0)).getUTCDate();
+  const lastDayOfTarget = new Date(
+    Date.UTC(date.getUTCFullYear(), targetMonth + 1, 0),
+  ).getUTCDate();
   const day = Math.min(date.getUTCDate(), lastDayOfTarget);
   return toIsoDate(new Date(Date.UTC(date.getUTCFullYear(), targetMonth, day)));
 }

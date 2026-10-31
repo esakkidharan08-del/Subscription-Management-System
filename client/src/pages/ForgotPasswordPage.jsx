@@ -23,7 +23,12 @@ export default function ForgotPasswordPage() {
           <>
             <label>
               Email
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </label>
             <FieldError error={request.error} field="email" />
             <button type="submit" disabled={request.isPending}>

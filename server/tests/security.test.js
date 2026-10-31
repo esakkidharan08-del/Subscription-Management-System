@@ -125,9 +125,13 @@ describe('audit log and customer payments', () => {
     const ravis = invoiceFor(fixtures.otherCustomer.id);
     const own = invoiceFor(fixtures.customer.id);
 
-    const other = await asha.post(`/api/invoices/${ravis.id}/payments`).send({ method: 'upi', amount: 100 });
+    const other = await asha
+      .post(`/api/invoices/${ravis.id}/payments`)
+      .send({ method: 'upi', amount: 100 });
     assert.equal(other.status, 404);
-    const cash = await asha.post(`/api/invoices/${own.id}/payments`).send({ method: 'cash', amount: 100 });
+    const cash = await asha
+      .post(`/api/invoices/${own.id}/payments`)
+      .send({ method: 'cash', amount: 100 });
     assert.equal(cash.status, 400);
   });
 
@@ -146,7 +150,9 @@ describe('audit log and customer payments', () => {
   });
 
   test('CSV export quotes fields and defuses spreadsheet formulas', async () => {
-    db.prepare("UPDATE users SET name = '=HYPERLINK(\"x\")' WHERE id = ?").run(fixtures.customer.id);
+    db.prepare('UPDATE users SET name = \'=HYPERLINK("x")\' WHERE id = ?').run(
+      fixtures.customer.id,
+    );
     const staff = await loginAs(app, 'staff@test.dev');
     const response = await staff.get('/api/invoices/export.csv');
 

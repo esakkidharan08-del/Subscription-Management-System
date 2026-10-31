@@ -66,7 +66,10 @@ describe('discount rules', () => {
     assert.equal(isDiscountUsable(discount({ active: 0 }), '2026-01-01'), false);
     assert.equal(isDiscountUsable(discount({ starts_at: '2026-02-01' }), '2026-01-01'), false);
     assert.equal(isDiscountUsable(discount({ ends_at: '2025-12-31' }), '2026-01-01'), false);
-    assert.equal(isDiscountUsable(discount({ usage_limit: 3, times_used: 3 }), '2026-01-01'), false);
+    assert.equal(
+      isDiscountUsable(discount({ usage_limit: 3, times_used: 3 }), '2026-01-01'),
+      false,
+    );
   });
 
   test('a fixed discount never goes below zero', () => {
@@ -88,7 +91,10 @@ describe('discount rules', () => {
 describe('invoice maths', () => {
   test('allocation always adds back up to the amount', () => {
     const shares = allocate(100, [1, 1, 1]);
-    assert.equal(shares.reduce((a, b) => a + b, 0), 100);
+    assert.equal(
+      shares.reduce((a, b) => a + b, 0),
+      100,
+    );
     assert.deepEqual(allocate(0, [5, 5]), [0, 0]);
   });
 

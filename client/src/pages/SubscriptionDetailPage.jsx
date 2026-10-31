@@ -35,29 +35,57 @@ export default function SubscriptionDetailPage() {
     },
   });
 
+  const pauseToggle = useMutation({
+    mutationFn: (paused) =>
+      paused ? billing.resumeSubscription(id) : billing.pauseSubscription(id),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['subscriptions', id], updated);
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'], exact: false });
+    },
+  });
+
   if (subscription.isLoading) return <p className="page-message">Loading…</p>;
   if (subscription.error) return <p className="form-error">{subscription.error.message}</p>;
 
   const s = subscription.data;
   const next = NEXT_STEP[s.status];
+  const canPause = s.status === 'active' && s.end_behavior === 'pausable';
 
   return (
     <div className="page">
       <div className="page-header">
         <h1>
-          {s.number} <StatusBadge status={s.status} />
+          {s.number} <StatusBadge status={s.paused_at ? 'paused' : s.status} />
         </h1>
-        {isStaff && next && (
-          <button
-            className={next.status === 'closed' ? 'button-secondary' : undefined}
-            disabled={advance.isPending}
-            onClick={() => advance.mutate(next.status)}
-          >
-            {next.label}
-          </button>
-        )}
+        <div className="form-actions">
+          {isStaff && canPause && (
+            <button
+              className="button-secondary"
+              disabled={pauseToggle.isPending}
+              onClick={() => pauseToggle.mutate(Boolean(s.paused_at))}
+            >
+              {s.paused_at ? 'Resume billing' : 'Pause'}
+            </button>
+          )}
+          {isStaff && next && !s.paused_at && (
+            <button
+              className={next.status === 'closed' ? 'button-secondary' : undefined}
+              disabled={advance.isPending}
+              onClick={() => advance.mutate(next.status)}
+            >
+              {next.label}
+            </button>
+          )}
+        </div>
       </div>
-      {advance.error && <p className="form-error">{advance.error.message}</p>}
+      {s.paused_at && (
+        <p className="form-success">
+          Paused since {s.paused_at}. No invoices are created while paused.
+        </p>
+      )}
+      {(advance.error || pauseToggle.error) && (
+        <p className="form-error">{(advance.error || pauseToggle.error).message}</p>
+      )}
 
       <section className="card details-grid">
         <div>
@@ -98,7 +126,9 @@ export default function SubscriptionDetailPage() {
                 <td>{line.product_name}</td>
                 <td className="number">{line.quantity}</td>
                 <td className="number">{formatMoney(line.unit_price)}</td>
-                <td>{line.tax_name ? `${line.tax_name} (${formatPercent(line.rate_bp)})` : 'None'}</td>
+                <td>
+                  {line.tax_name ? `${line.tax_name} (${formatPercent(line.rate_bp)})` : 'None'}
+                </td>
                 <td className="number">{formatMoney(line.amount)}</td>
               </tr>
             ))}

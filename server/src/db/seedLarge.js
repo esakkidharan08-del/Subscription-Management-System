@@ -105,15 +105,31 @@ export function seedLargeDataset() {
     const id = subId++;
     const plan = random.pick(plans);
     const customerId = random.pick(customerIds);
-    const quantity = random.weighted([[1, 40], [2, 20], [3, 12], [5, 12], [10, 8], [25, 5], [50, 3]]);
-    const terms = random.weighted([['immediate', 3], ['net_15', 4], ['net_30', 3]]);
+    const quantity = random.weighted([
+      [1, 40],
+      [2, 20],
+      [3, 12],
+      [5, 12],
+      [10, 8],
+      [25, 5],
+      [50, 3],
+    ]);
+    const terms = random.weighted([
+      ['immediate', 3],
+      ['net_15', 4],
+      ['net_30', 3],
+    ]);
     const startDate = billed
       ? addDays(addMonths(asOf, -MONTHS_BILLED), -random.int(0, 27))
       : addDays(asOf, random.int(-20, 10));
 
     // Most billed subscriptions are still running; a few were closed after their last invoice.
     const closed = billed && random.chance(0.08);
-    const status = billed ? (closed ? 'closed' : 'active') : random.pick(['draft', 'quotation', 'confirmed']);
+    const status = billed
+      ? closed
+        ? 'closed'
+        : 'active'
+      : random.pick(['draft', 'quotation', 'confirmed']);
     const expiry = closed
       ? addMonths(startDate, MONTHS_BILLED)
       : random.chance(0.3)
@@ -122,21 +138,56 @@ export function seedLargeDataset() {
     const nextBill = status === 'active' ? addMonths(startDate, MONTHS_BILLED) : null;
 
     // Some customers negotiated a lower unit price.
-    const unitPrice = random.chance(0.15) ? Math.round(plan.price * random.pick([0.8, 0.85, 0.9])) : plan.price;
+    const unitPrice = random.chance(0.15)
+      ? Math.round(plan.price * random.pick([0.8, 0.85, 0.9]))
+      : plan.price;
     const amount = unitPrice * quantity;
 
-    insertSub.run(id, `SUB-${pad(id)}`, customerId, plan.id, startDate, expiry, terms, status, nextBill, `${startDate} 10:00:00`);
+    insertSub.run(
+      id,
+      `SUB-${pad(id)}`,
+      customerId,
+      plan.id,
+      startDate,
+      expiry,
+      terms,
+      status,
+      nextBill,
+      `${startDate} 10:00:00`,
+    );
     insertSubLine.run(id, plan.product_id, quantity, unitPrice, plan.tax_id, amount);
 
     if (!billed) return;
     let periodStart = startDate;
     for (let month = 0; month < MONTHS_BILLED; month++) {
-      addInvoice({ id, customerId, plan, quantity, unitPrice, amount, terms, startDate, periodStart, month });
+      addInvoice({
+        id,
+        customerId,
+        plan,
+        quantity,
+        unitPrice,
+        amount,
+        terms,
+        startDate,
+        periodStart,
+        month,
+      });
       periodStart = nextBillingDate(startDate, periodStart, 'monthly');
     }
   }
 
-  function addInvoice({ id, customerId, plan, quantity, unitPrice, amount, terms, startDate, periodStart, month }) {
+  function addInvoice({
+    id,
+    customerId,
+    plan,
+    quantity,
+    unitPrice,
+    amount,
+    terms,
+    startDate,
+    periodStart,
+    month,
+  }) {
     const nextStart = nextBillingDate(startDate, periodStart, 'monthly');
     const periodEnd = addDays(nextStart, -1);
     const dueDate = addDays(periodStart, TERM_DAYS[terms]);
@@ -151,10 +202,20 @@ export function seedLargeDataset() {
     const isRecent = month >= MONTHS_BILLED - 2;
     const outcome = random.weighted(
       isRecent
-        ? [['unpaid', 55], ['paid', 40], ['partial', 5]]
-        : [['paid', 85], ['unpaid', 8], ['partial', 5], ['cancelled', 2]],
+        ? [
+            ['unpaid', 55],
+            ['paid', 40],
+            ['partial', 5],
+          ]
+        : [
+            ['paid', 85],
+            ['unpaid', 8],
+            ['partial', 5],
+            ['cancelled', 2],
+          ],
     );
-    const status = outcome === 'paid' ? 'paid' : outcome === 'cancelled' ? 'cancelled' : 'confirmed';
+    const status =
+      outcome === 'paid' ? 'paid' : outcome === 'cancelled' ? 'cancelled' : 'confirmed';
 
     insertInvoice.run(
       invoiceId,
@@ -183,10 +244,23 @@ export function seedLargeDataset() {
 
     if (outcome === 'paid' || outcome === 'partial') {
       // Most pay a few days early, some pay late.
-      const paidOn = random.chance(0.8) ? addDays(dueDate, -random.int(0, 10)) : addDays(dueDate, random.int(1, 25));
-      const method = random.weighted([['upi', 45], ['card', 25], ['bank_transfer', 22], ['cash', 8]]);
+      const paidOn = random.chance(0.8)
+        ? addDays(dueDate, -random.int(0, 10))
+        : addDays(dueDate, random.int(1, 25));
+      const method = random.weighted([
+        ['upi', 45],
+        ['card', 25],
+        ['bank_transfer', 22],
+        ['cash', 8],
+      ]);
       const paid = outcome === 'paid' ? total : Math.round(total * random.pick([0.25, 0.5, 0.6]));
-      insertPayment.run(invoiceId, method, paid, paidOn < periodStart ? periodStart : paidOn, fakePaymentNote(random));
+      insertPayment.run(
+        invoiceId,
+        method,
+        paid,
+        paidOn < periodStart ? periodStart : paidOn,
+        fakePaymentNote(random),
+      );
     }
     invoiceId += 1;
   }

@@ -12,7 +12,8 @@ function assertProductsExist(lines) {
   const { found } = db
     .prepare(`SELECT COUNT(*) AS found FROM products WHERE id IN (${placeholders(ids)})`)
     .get(...ids);
-  if (found !== ids.length) throw badRequest('One of the template lines uses a product that does not exist');
+  if (found !== ids.length)
+    throw badRequest('One of the template lines uses a product that does not exist');
 }
 
 export function listTemplates(paging) {

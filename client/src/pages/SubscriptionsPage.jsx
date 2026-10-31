@@ -37,7 +37,9 @@ function NewSubscriptionForm({ onCancel }) {
 
   const create = useMutation({
     mutationFn: (body) =>
-      form.source === 'template' ? billing.createFromTemplate(body) : billing.createSubscription(body),
+      form.source === 'template'
+        ? billing.createFromTemplate(body)
+        : billing.createSubscription(body),
     onSuccess: (subscription) => {
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
       navigate(`/subscriptions/${subscription.id}`);
@@ -168,7 +170,9 @@ export default function SubscriptionsPage() {
     <div className="page">
       <div className="page-header">
         <h1>{isStaff ? 'Subscriptions' : 'My subscriptions'}</h1>
-        {isStaff && !creating && <button onClick={() => setCreating(true)}>New subscription</button>}
+        {isStaff && !creating && (
+          <button onClick={() => setCreating(true)}>New subscription</button>
+        )}
       </div>
 
       {creating && <NewSubscriptionForm onCancel={() => setCreating(false)} />}

@@ -76,7 +76,12 @@ function PlanForm({ plan, products, onSave, onCancel, saving, error }) {
       </label>
       <label>
         Minimum quantity
-        <input type="number" min="1" value={form.min_quantity} onChange={setField('min_quantity')} />
+        <input
+          type="number"
+          min="1"
+          value={form.min_quantity}
+          onChange={setField('min_quantity')}
+        />
         <FieldError error={error} field="min_quantity" />
       </label>
       <label>

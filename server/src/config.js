@@ -22,4 +22,6 @@ export const config = {
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   resetTokenMinutes: 30,
   billingIntervalMinutes: Number(process.env.BILLING_INTERVAL_MINUTES ?? 60),
+  // AUTO_CONFIRM_INVOICES=false makes the billing run leave drafts for staff to review.
+  autoConfirmInvoices: process.env.AUTO_CONFIRM_INVOICES !== 'false',
 };

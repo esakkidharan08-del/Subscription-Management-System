@@ -18,7 +18,9 @@ export function notFoundHandler(req, res) {
 // eslint-disable-next-line no-unused-vars
 export function errorHandler(err, req, res, next) {
   if (err instanceof ZodError) {
-    return res.status(400).json({ error: 'Please fix the highlighted fields', fields: fieldErrors(err) });
+    return res
+      .status(400)
+      .json({ error: 'Please fix the highlighted fields', fields: fieldErrors(err) });
   }
 
   // Thrown by express.json() before any route runs.
@@ -30,7 +32,9 @@ export function errorHandler(err, req, res, next) {
   }
 
   if (err instanceof AppError) {
-    return res.status(err.status).json({ error: err.message, ...(err.details && { details: err.details }) });
+    return res
+      .status(err.status)
+      .json({ error: err.message, ...(err.details && { details: err.details }) });
   }
 
   if (err.code === 'ERR_SQLITE_ERROR' && /UNIQUE constraint failed/.test(err.message)) {
@@ -38,9 +42,9 @@ export function errorHandler(err, req, res, next) {
   }
 
   if (err.code === 'ERR_SQLITE_ERROR' && /FOREIGN KEY constraint failed/.test(err.message)) {
-    return res
-      .status(409)
-      .json({ error: 'This refers to a record that does not exist, or the record is still in use' });
+    return res.status(409).json({
+      error: 'This refers to a record that does not exist, or the record is still in use',
+    });
   }
 
   console.error(err);

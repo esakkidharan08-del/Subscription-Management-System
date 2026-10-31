@@ -2,7 +2,9 @@ import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { changePassword } from '../api/admin.js';
 import { useSession } from '../auth/useSession.js';
+import { passwordField } from 'shared/validation/auth.js';
 import FieldError from '../components/FieldError.jsx';
+import PasswordChecklist from '../components/PasswordChecklist.jsx';
 import FormMessage from '../components/FormMessage.jsx';
 
 export default function AccountPage() {
@@ -46,16 +48,24 @@ export default function AccountPage() {
         <FormMessage error={change.error} />
         <label>
           Current password
-          <input type="password" value={form.current_password} onChange={setField('current_password')} />
+          <input
+            type="password"
+            value={form.current_password}
+            onChange={setField('current_password')}
+          />
         </label>
         <FieldError error={change.error} field="current_password" />
         <label>
           New password
           <input type="password" value={form.new_password} onChange={setField('new_password')} />
         </label>
+        <PasswordChecklist value={form.new_password} />
         <FieldError error={change.error} field="new_password" />
         <p className="hint">Changing it signs you out on every other device.</p>
-        <button type="submit" disabled={change.isPending}>
+        <button
+          type="submit"
+          disabled={change.isPending || !passwordField.safeParse(form.new_password).success}
+        >
           Change password
         </button>
       </form>

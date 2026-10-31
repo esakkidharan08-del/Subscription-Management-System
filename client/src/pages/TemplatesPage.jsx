@@ -22,7 +22,10 @@ function TemplateForm({ template, plans, products, onSave, onCancel, saving, err
   const setField = (field) => (event) => setForm({ ...form, [field]: event.target.value });
 
   function setLine(index, field, value) {
-    setForm({ ...form, lines: form.lines.map((l, i) => (i === index ? { ...l, [field]: value } : l)) });
+    setForm({
+      ...form,
+      lines: form.lines.map((l, i) => (i === index ? { ...l, [field]: value } : l)),
+    });
   }
 
   function handleSubmit(event) {
@@ -61,7 +64,12 @@ function TemplateForm({ template, plans, products, onSave, onCancel, saving, err
       </label>
       <label>
         Valid for (days)
-        <input type="number" min="1" value={form.validity_days} onChange={setField('validity_days')} />
+        <input
+          type="number"
+          min="1"
+          value={form.validity_days}
+          onChange={setField('validity_days')}
+        />
         <FieldError error={error} field="validity_days" />
       </label>
 
@@ -69,7 +77,10 @@ function TemplateForm({ template, plans, products, onSave, onCancel, saving, err
         <legend>Lines</legend>
         {form.lines.map((line, index) => (
           <div className="inline-row" key={index}>
-            <select value={line.product_id} onChange={(e) => setLine(index, 'product_id', e.target.value)}>
+            <select
+              value={line.product_id}
+              onChange={(e) => setLine(index, 'product_id', e.target.value)}
+            >
               <option value="">Product</option>
               {products.map((product) => (
                 <option key={product.id} value={product.id}>
@@ -95,7 +106,9 @@ function TemplateForm({ template, plans, products, onSave, onCancel, saving, err
         <button
           type="button"
           className="button-secondary"
-          onClick={() => setForm({ ...form, lines: [...form.lines, { product_id: '', quantity: 1 }] })}
+          onClick={() =>
+            setForm({ ...form, lines: [...form.lines, { product_id: '', quantity: 1 }] })
+          }
         >
           Add line
         </button>
@@ -124,7 +137,11 @@ export default function TemplatesPage() {
     queryFn: () => catalog.listTemplates({ page }),
     placeholderData: keepPreviousData,
   });
-  const plans = useQuery({ queryKey: ['plans', 'all'], queryFn: catalog.allPlans, enabled: canEdit });
+  const plans = useQuery({
+    queryKey: ['plans', 'all'],
+    queryFn: catalog.allPlans,
+    enabled: canEdit,
+  });
   const products = useQuery({
     queryKey: ['products', 'all'],
     queryFn: catalog.allProducts,
@@ -188,15 +205,19 @@ export default function TemplatesPage() {
                   <td>{template.plan_name}</td>
                   <td className="number">{template.validity_days} days</td>
                   <td>
-                    {template.lines.map((l) => `${l.quantity} × ${productName(l.product_id)}`).join(', ') ||
-                      '—'}
+                    {template.lines
+                      .map((l) => `${l.quantity} × ${productName(l.product_id)}`)
+                      .join(', ') || '—'}
                   </td>
                   {canEdit && (
                     <td className="row-actions">
                       <button className="button-link" onClick={() => openForm(template)}>
                         Edit
                       </button>
-                      <button className="button-link danger" onClick={() => remove.mutate(template.id)}>
+                      <button
+                        className="button-link danger"
+                        onClick={() => remove.mutate(template.id)}
+                      >
                         Delete
                       </button>
                     </td>

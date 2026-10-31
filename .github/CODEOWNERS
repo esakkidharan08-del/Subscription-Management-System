@@ -1,0 +1,36 @@
+# One primary reviewer per area, following the team split in the build plan.
+# GitHub requests a review from the owner of every path a pull request touches.
+# Replace the handle on each line with the teammate who owns that area.
+# Later lines win, so the catch-all goes first.
+
+*                                   @esakkidharan08-del
+
+# A: auth, users, roles, password reset
+/server/src/services/authService.js @esakkidharan08-del
+/server/src/routes/auth.js          @esakkidharan08-del
+/server/src/routes/users.js         @esakkidharan08-del
+/server/src/middleware/             @esakkidharan08-del
+/shared/validation/auth.js          @esakkidharan08-del
+
+# B: products, variants, plans, taxes, quotation templates
+/server/src/services/productService.js           @esakkidharan08-del
+/server/src/services/planService.js              @esakkidharan08-del
+/server/src/services/tax*.js                     @esakkidharan08-del
+/server/src/services/quotationTemplateService.js @esakkidharan08-del
+
+# C: subscriptions, billing run, invoices, discounts
+/server/src/services/subscriptionService.js @esakkidharan08-del
+/server/src/services/lifecycle.js           @esakkidharan08-del
+/server/src/services/billingService.js      @esakkidharan08-del
+/server/src/services/invoice*.js            @esakkidharan08-del
+/server/src/services/discount*.js           @esakkidharan08-del
+/server/tests/                              @esakkidharan08-del
+
+# D: frontend shell, navigation, customer portal, payments, dashboard
+/client/                                    @esakkidharan08-del
+/server/src/services/paymentService.js      @esakkidharan08-del
+/server/src/services/dashboardService.js    @esakkidharan08-del
+
+# Schema changes affect everyone, so they need the repo owner's review.
+/server/src/db/schema.sql                   @esakkidharan08-del
+/server/src/db/migrations.js                @esakkidharan08-del

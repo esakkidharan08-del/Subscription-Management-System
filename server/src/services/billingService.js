@@ -13,7 +13,7 @@ function dueSubscriptions(asOf) {
     .prepare(
       `SELECT s.*, pl.billing_period, pl.end_behavior
        FROM subscriptions s JOIN plans pl ON pl.id = s.plan_id
-       WHERE s.status = 'active' AND s.next_billing_date <= ?
+       WHERE s.status = 'active' AND s.paused_at IS NULL AND s.next_billing_date <= ?
        ORDER BY s.id`,
     )
     .all(asOf);
@@ -65,7 +65,13 @@ function closeExpired(asOf) {
 }
 
 export function runBilling(asOf = today()) {
-  const summary = { asOf, invoicesCreated: 0, periodsSkipped: 0, subscriptionsClosed: 0, failures: [] };
+  const summary = {
+    asOf,
+    invoicesCreated: 0,
+    periodsSkipped: 0,
+    subscriptionsClosed: 0,
+    failures: [],
+  };
 
   for (const subscription of dueSubscriptions(asOf)) {
     let periodStart = subscription.next_billing_date;

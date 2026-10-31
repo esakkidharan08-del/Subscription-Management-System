@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import * as billing from '../api/billing.js';
 import { useSession } from '../auth/useSession.js';
+import DraftInvoiceEditor from '../components/DraftInvoiceEditor.jsx';
 import FieldError from '../components/FieldError.jsx';
 import FormMessage from '../components/FormMessage.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
@@ -68,7 +69,13 @@ function PaymentForm({ invoice, onPaid }) {
             </option>
           ))}
         </select>
-        <input type="number" step="0.01" min="0" value={form.amount} onChange={setField('amount')} />
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          value={form.amount}
+          onChange={setField('amount')}
+        />
         <input type="date" value={form.paid_on} onChange={setField('paid_on')} />
         <input placeholder="Note (optional)" value={form.note} onChange={setField('note')} />
         <button type="submit" disabled={pay.isPending}>
@@ -92,6 +99,7 @@ export default function InvoiceDetailPage() {
     queryClient.setQueryData(['invoices', id], updated);
     queryClient.invalidateQueries({ queryKey: ['invoices'], exact: false });
   };
+  const [editing, setEditing] = useState(false);
   const confirm = useMutation({ mutationFn: () => billing.confirmInvoice(id), onSuccess: refresh });
   const cancel = useMutation({ mutationFn: () => billing.cancelInvoice(id), onSuccess: refresh });
 
@@ -99,7 +107,8 @@ export default function InvoiceDetailPage() {
   if (invoice.error) return <p className="form-error">{invoice.error.message}</p>;
 
   const inv = invoice.data;
-  const canCancel = isStaff && ['draft', 'confirmed'].includes(inv.status) && inv.payments.length === 0;
+  const canCancel =
+    isStaff && ['draft', 'confirmed'].includes(inv.status) && inv.payments.length === 0;
   const actionError = confirm.error || cancel.error;
 
   return (
@@ -109,13 +118,22 @@ export default function InvoiceDetailPage() {
           {inv.number} <StatusBadge status={inv.status} overdue={inv.is_overdue} />
         </h1>
         <div className="form-actions">
+          {isStaff && inv.status === 'draft' && !editing && (
+            <button className="button-secondary" onClick={() => setEditing(true)}>
+              Edit draft
+            </button>
+          )}
           {isStaff && inv.status === 'draft' && (
-            <button onClick={() => confirm.mutate()} disabled={confirm.isPending}>
+            <button onClick={() => confirm.mutate()} disabled={confirm.isPending || editing}>
               Confirm
             </button>
           )}
           {canCancel && (
-            <button className="button-secondary" onClick={() => cancel.mutate()} disabled={cancel.isPending}>
+            <button
+              className="button-secondary"
+              onClick={() => cancel.mutate()}
+              disabled={cancel.isPending}
+            >
               Cancel invoice
             </button>
           )}
@@ -141,6 +159,19 @@ export default function InvoiceDetailPage() {
           {inv.due_date}
         </div>
       </section>
+
+      {editing && (
+        <section className="card">
+          <DraftInvoiceEditor
+            invoice={inv}
+            onCancel={() => setEditing(false)}
+            onSaved={(updated) => {
+              refresh(updated);
+              setEditing(false);
+            }}
+          />
+        </section>
+      )}
 
       <section className="card">
         <table>
@@ -214,7 +245,9 @@ export default function InvoiceDetailPage() {
         {isStaff && inv.status === 'confirmed' && (
           <PaymentForm key={inv.amount_paid} invoice={inv} onPaid={refresh} />
         )}
-        {!isStaff && inv.status === 'confirmed' && <CustomerPayButton invoice={inv} onPaid={refresh} />}
+        {!isStaff && inv.status === 'confirmed' && (
+          <CustomerPayButton invoice={inv} onPaid={refresh} />
+        )}
       </section>
     </div>
   );

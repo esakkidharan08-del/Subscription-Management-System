@@ -25,7 +25,9 @@ function TaxesTable({ canEdit }) {
     event.preventDefault();
     // The rate is typed as a percentage and stored as basis points.
     const rate = toNumberOrNull(form.rate);
-    save.mutate({ body: { name: form.name, rate_bp: rate === null ? null : Math.round(rate * 100) } });
+    save.mutate({
+      body: { name: form.name, rate_bp: rate === null ? null : Math.round(rate * 100) },
+    });
   }
 
   return (
@@ -119,8 +121,8 @@ function TaxRulesTable({ canEdit }) {
     <section className="card">
       <h2>Tax rules</h2>
       <p className="hint">
-        A rule applies to one product or to every product of a type. The highest priority wins, and a
-        product rule beats a type rule on a tie.
+        A rule applies to one product or to every product of a type. The highest priority wins, and
+        a product rule beats a type rule on a tie.
       </p>
       <table>
         <thead>
@@ -171,8 +173,17 @@ function TaxRulesTable({ canEdit }) {
                 </option>
               ))}
             </select>
-            <input placeholder="or type, e.g. software" value={form.category} onChange={setField('category')} />
-            <input type="number" placeholder="Priority" value={form.priority} onChange={setField('priority')} />
+            <input
+              placeholder="or type, e.g. software"
+              value={form.category}
+              onChange={setField('category')}
+            />
+            <input
+              type="number"
+              placeholder="Priority"
+              value={form.priority}
+              onChange={setField('priority')}
+            />
             <button type="submit" disabled={save.isPending}>
               Add rule
             </button>

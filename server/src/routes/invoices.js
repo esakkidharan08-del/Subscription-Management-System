@@ -7,7 +7,7 @@ import { readPagination } from '../lib/pagination.js';
 import { readId } from '../lib/params.js';
 import * as invoices from '../services/invoiceService.js';
 import { recordPayment } from '../services/paymentService.js';
-import { paymentSchema } from '../validation/billing.js';
+import { invoiceEditSchema, paymentSchema } from '../validation/billing.js';
 
 const router = Router();
 
@@ -40,6 +40,10 @@ router.get('/export.csv', staffOnly, (req, res) => {
 
 router.get('/:id', (req, res) => {
   res.json(invoices.getInvoice(readId(req), req.user));
+});
+
+router.put('/:id', staffOnly, validateBody(invoiceEditSchema), (req, res) => {
+  res.json(invoices.updateDraftInvoice(readId(req), req.body, req.user));
 });
 
 router.post('/:id/confirm', staffOnly, (req, res) => {

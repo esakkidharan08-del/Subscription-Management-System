@@ -34,11 +34,15 @@ describe('subscriptions and invoices over HTTP', () => {
     assert.equal(created.body.status, 'draft');
     assert.match(created.body.number, /^SUB-\d{5}$/);
 
-    const skip = await staff.post(`/api/subscriptions/${created.body.id}/status`).send({ status: 'active' });
+    const skip = await staff
+      .post(`/api/subscriptions/${created.body.id}/status`)
+      .send({ status: 'active' });
     assert.equal(skip.status, 400);
 
     for (const status of ['quotation', 'confirmed', 'active']) {
-      const step = await staff.post(`/api/subscriptions/${created.body.id}/status`).send({ status });
+      const step = await staff
+        .post(`/api/subscriptions/${created.body.id}/status`)
+        .send({ status });
       assert.equal(step.status, 200);
     }
   });
@@ -117,29 +121,41 @@ describe('payments', () => {
   test('an invoice is paid only once payments reach the total', async () => {
     const staff = await loginAs(app, 'staff@test.dev');
 
-    const partial = await staff.post(`/api/invoices/${invoiceId}/payments`).send({ method: 'upi', amount: 18000 });
+    const partial = await staff
+      .post(`/api/invoices/${invoiceId}/payments`)
+      .send({ method: 'upi', amount: 18000 });
     assert.equal(partial.status, 201);
     assert.equal(partial.body.status, 'confirmed');
     assert.equal(partial.body.balance, 100000);
 
-    const rest = await staff.post(`/api/invoices/${invoiceId}/payments`).send({ method: 'cash', amount: 100000 });
+    const rest = await staff
+      .post(`/api/invoices/${invoiceId}/payments`)
+      .send({ method: 'cash', amount: 100000 });
     assert.equal(rest.body.status, 'paid');
     assert.equal(rest.body.balance, 0);
   });
 
   test('rejects paying more than the balance', async () => {
     const staff = await loginAs(app, 'staff@test.dev');
-    const response = await staff.post(`/api/invoices/${invoiceId}/payments`).send({ method: 'card', amount: 999999 });
+    const response = await staff
+      .post(`/api/invoices/${invoiceId}/payments`)
+      .send({ method: 'card', amount: 999999 });
     assert.equal(response.status, 400);
     assert.match(response.body.error, /more than the balance/);
   });
 
   test('a paid invoice cannot be cancelled or paid again', async () => {
     const staff = await loginAs(app, 'staff@test.dev');
-    await staff.post(`/api/invoices/${invoiceId}/payments`).send({ method: 'card', amount: 118000 });
+    await staff
+      .post(`/api/invoices/${invoiceId}/payments`)
+      .send({ method: 'card', amount: 118000 });
 
     assert.equal((await staff.post(`/api/invoices/${invoiceId}/cancel`)).status, 400);
-    assert.equal((await staff.post(`/api/invoices/${invoiceId}/payments`).send({ method: 'card', amount: 1 })).status, 400);
+    assert.equal(
+      (await staff.post(`/api/invoices/${invoiceId}/payments`).send({ method: 'card', amount: 1 }))
+        .status,
+      400,
+    );
   });
 
   test('overdue is worked out from the due date', async () => {
@@ -149,7 +165,9 @@ describe('payments', () => {
     assert.equal(overdue.body.total, 1);
     assert.equal(overdue.body.data[0].is_overdue, 1);
 
-    await staff.post(`/api/invoices/${invoiceId}/payments`).send({ method: 'card', amount: 118000 });
+    await staff
+      .post(`/api/invoices/${invoiceId}/payments`)
+      .send({ method: 'card', amount: 118000 });
     assert.equal((await staff.get('/api/invoices?overdue=true')).body.total, 0);
   });
 });

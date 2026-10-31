@@ -10,8 +10,10 @@ function describeDetails(entry) {
   const d = entry.details;
   if (!d) return '';
   if (entry.action === 'status_changed') return `${d.from} → ${d.to}`;
-  if (entry.action === 'payment_recorded') return `${formatMoney(d.amount)} by ${labelFor(d.method)}`;
-  if (entry.action === 'billing_run') return `${d.invoicesCreated} invoices, ${d.subscriptionsClosed} closed`;
+  if (entry.action === 'payment_recorded')
+    return `${formatMoney(d.amount)} by ${labelFor(d.method)}`;
+  if (entry.action === 'billing_run')
+    return `${d.invoicesCreated} invoices, ${d.subscriptionsClosed} closed`;
   if (d.email) return `${d.email} (${d.role})`;
   if (d.name) return d.name;
   return '';

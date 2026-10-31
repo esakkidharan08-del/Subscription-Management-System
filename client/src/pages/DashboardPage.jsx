@@ -24,7 +24,11 @@ function StatTile({ label, value, note, to }) {
 const STATUS_ORDER = ['draft', 'quotation', 'confirmed', 'active', 'closed'];
 
 export default function DashboardPage() {
-  const dashboard = useQuery({ queryKey: ['dashboard'], queryFn: fetchDashboard, staleTime: 60_000 });
+  const dashboard = useQuery({
+    queryKey: ['dashboard'],
+    queryFn: fetchDashboard,
+    staleTime: 60_000,
+  });
 
   if (dashboard.isLoading) return <p className="page-message">Loading…</p>;
   if (dashboard.error) return <p className="form-error">{dashboard.error.message}</p>;
@@ -113,7 +117,9 @@ export default function DashboardPage() {
               {STATUS_ORDER.map((status) => (
                 <tr key={status}>
                   <td className="capitalize">{status}</td>
-                  <td className="number">{(d.subscriptionsByStatus[status] ?? 0).toLocaleString('en-IN')}</td>
+                  <td className="number">
+                    {(d.subscriptionsByStatus[status] ?? 0).toLocaleString('en-IN')}
+                  </td>
                 </tr>
               ))}
             </tbody>

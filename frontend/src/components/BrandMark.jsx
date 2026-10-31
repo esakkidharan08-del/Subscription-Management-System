@@ -1,4 +1,4 @@
-// The mark is a ring with one gap and a dot where it closes: a billing cycle
+// The mark is a loop with one gap and a dot where it closes: a billing cycle
 // coming round. Drawn in ink so the chrome keeps no colour of its own.
 export default function BrandMark({ scope }) {
   return (
@@ -15,7 +15,7 @@ export default function BrandMark({ scope }) {
         <circle cx="21" cy="14" r="2" fill="#fff" />
       </svg>
       <div>
-        <span className="product-name">Recur</span>
+        <span className="product-name">Brightloop Software</span>
         {scope && <span className="product-scope">{scope}</span>}
       </div>
     </div>

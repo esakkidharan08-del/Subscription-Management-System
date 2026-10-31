@@ -1,4 +1,6 @@
-# Subscription Management System
+# Brightloop Software
+
+Subscription billing for Brightloop Software.
 
 Recurring billing for products sold on plans: quotations, subscriptions, a billing
 run that creates invoices, taxes, discounts, payments, overdue tracking, a finance

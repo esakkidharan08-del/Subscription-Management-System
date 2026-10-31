@@ -68,7 +68,7 @@ export async function requestPasswordReset(email) {
 
   await sendMail({
     to: email,
-    subject: 'Reset your password',
+    subject: 'Reset your Brightloop Software password',
     text: `Hi ${user.name},\n\nOpen this link to choose a new password:\n${config.clientUrl}/reset-password?token=${token}\n\nIt expires in ${config.resetTokenMinutes} minutes.`,
   });
 }
